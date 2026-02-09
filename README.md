@@ -3,14 +3,13 @@
 ## Project Title
 Game Tips and Tricks
 
-## Group Name
+## Group Name: OM
 Game Tips and Tricks Team
 
 ## Group Members
-- Amit Chaudhary  
-- Member 2  
-- Member 3  
-- Member 4 (if applicable)
+Yushan Gurung (A00022006)
+Laxman Kathayat (A00024312)
+Anil Kumar Chauhan (A00033291)
 
 ## Module
 Software Engineering
