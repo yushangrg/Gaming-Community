@@ -2,47 +2,54 @@
 const express = require("express");
 
 // Create express app
-var app = express();
+const app = express();
 
 // Add static files location
 app.use(express.static("static"));
 
-// Get the functions in the db.js file to use
-const db = require('./services/db');
+// Import database functions
+const db = require("./services/db");
 
-// Create a route for root - /
-app.get("/", function(req, res) {
-    res.send("Game Tips and Tricks - Community Platform");
+// --------------------------------------------------
+// Root route – project identification
+// --------------------------------------------------
+app.get("/", function (req, res) {
+    res.send("Game Tips and Tricks – Community Platform");
 });
 
-// Create a route for testing the db
-app.get("/db_test", function(req, res) {
-    // Assumes a table called test_table exists in your database
-    sql = 'select * from test_table';
-    db.query(sql).then(results => {
-        console.log(results);
-        res.send(results)
-    });
+// --------------------------------------------------
+// Database test route (Sprint 1 level)
+// --------------------------------------------------
+app.get("/db_test", function (req, res) {
+    // Simple test query to confirm database connection
+    const sql = "SHOW TABLES";
+    db.query(sql)
+        .then(results => {
+            res.send(results);
+        })
+        .catch(err => {
+            console.error(err);
+            res.status(500).send("Database connection failed");
+        });
 });
 
-// Create a route for /goodbye
-// Responds to a 'GET' request
-app.get("/tips", function(req, res) {
+// --------------------------------------------------
+// Example route related to project theme
+// --------------------------------------------------
+app.get("/tips", function (req, res) {
     res.send("Browse and share game tips and tricks");
 });
 
-// Create a dynamic route for /hello/<name>, where name is any value provided by user
-// At the end of the URL
-// Responds to a 'GET' request
-app.get("/hello/:name", function(req, res) {
-    // req.params contains any parameters in the request
-    // We can examine it in the console for debugging purposes
-    console.log(req.params);
-    //  Retrieve the 'name' parameter and use it in a dynamically generated page
-    res.send("Hello " + req.params.name);
+// --------------------------------------------------
+// Dynamic route – user example (community focus)
+// --------------------------------------------------
+app.get("/hello/:username", function (req, res) {
+    res.send("Welcome to Game Tips and Tricks, " + req.params.username);
 });
 
-// Start server on port 3000
-app.listen(3000,function(){
-    console.log(`Game Tips and Tricks running at http://127.0.0.1:3000/`);
+// --------------------------------------------------
+// Start server
+// --------------------------------------------------
+app.listen(3000, function () {
+    console.log("Game Tips and Tricks running at http://127.0.0.1:3000/");
 });
