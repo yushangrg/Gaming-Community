@@ -1,22 +1,51 @@
-# Software Engineering Coursework – Sprint 1
+# 🎮 Game Tips & Tricks
 
-## Project Title
-Game Tips and Tricks
+## 📌 Overview
+Game Tips & Tricks is a community-based gaming platform where players can **share**, **learn**, and **improve** through gameplay tips, short video clips, and game-specific discussion rooms.
 
-## Group Name: OM
-Game Tips and Tricks Team
+The project focuses on building a **collaborative gaming community** inspired by content platforms and Discord-style interaction.
 
-## Group Members
-Yushan Gurung (A00022006)
-Laxman Kathayat (A00024312)
-Anil Kumar Chauhan (A00033291)
+---
 
-## Module
-Software Engineering
+## 🎯 Features (Planned)
+- User login and signup
+- Browse games by category
+- Watch gameplay tips and clips
+- Like, comment, save, and gift clips
+- Search games, clips, and creators
+- Join game rooms and team-up channels
+- Creator profiles and messaging
 
-## Description
-This repository contains the coursework for the Software Engineering module.  
-The project idea for this coursework is **Game Tips and Tricks**, a community-based platform focused on sharing gaming knowledge.
+---
 
-## Sprint
-Sprint 1 – Project setup and planning
+## 🛠 Tech Stack
+- Frontend: HTML, CSS, JavaScript (PUG)
+- Backend: Node.js, Express.js
+- Database: MySQL
+- Project Management: GitHub Projects (Kanban)
+- Diagrams: PlantUML
+- Design: Low-fidelity wireframes (Sprint 2)
+
+---
+
+## 🚀 Agile & Sprint Status
+- Sprint 1: Idea & requirements
+- Sprint 2: Documentation, wireframes, and UML diagrams
+- Sprint 3 (Next): MVP development
+
+---
+
+## 📋 Project Management
+Tasks are managed using a GitHub Kanban board with:
+**Backlog → Ready → In Progress → In Review → Done**
+
+---
+
+## 📎 Status
+**Current Sprint:** Sprint 2  
+**Stage:** Design & planning complete, ready for development
+
+---
+
+## 📄 License
+Educational project for Software Engineering coursework.
