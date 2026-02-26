@@ -45,7 +45,3 @@ Tasks are managed using a GitHub Kanban board with:
 **Current Sprint:** Sprint 2  
 **Stage:** Design & planning complete, ready for development
 
----
-
-## 📄 License
-Educational project for Software Engineering coursework.
