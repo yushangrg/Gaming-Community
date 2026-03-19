@@ -1,10 +1,16 @@
 extends layout
 
 block content
-  h1 Posts
+  h1 🎮 Game Posts
 
   each post in posts
     .card
+      img(src="/images/" + post.image width="100%")
+
       h3
         a(href="/posts/" + post.id)= post.title
+
       p By #{post.username}
+
+      p ⭐ Rating: #{post.rating} / 5
+      p 👍 Likes: #{post.likes}

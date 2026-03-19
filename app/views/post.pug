@@ -2,10 +2,20 @@ extends layout
 
 block content
   .card
+    img(src="/images/" + post.image width="100%")
+
     h1= post.title
     p= post.content
+
     p Author: #{post.username}
+
+    p ⭐ Rating: #{post.rating} / 5
+    p 👍 Likes: #{post.likes}
 
     h3 Tags
     each tag in tags
       span.tag= tag.name
+
+    h3 💬 Comments
+    each comment in comments
+      p #{comment.username}: #{comment.content}

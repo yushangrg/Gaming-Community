@@ -29,7 +29,13 @@ router.get('/:id', async (req, res) => {
         WHERE post_tags.post_id=?
     `, [req.params.id]);
 
-    res.render('post', { post: posts[0], tags });
+    // ✅ NEW: COMMENTS
+    const [comments] = await db.query(
+        'SELECT * FROM comments WHERE post_id=?',
+        [req.params.id]
+    );
+
+    res.render('post', { post: posts[0], tags, comments });
 });
 
 module.exports = router;
