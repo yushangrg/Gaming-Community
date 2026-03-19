@@ -1,28 +1,23 @@
-version: '3.3'
+version: '3'
+
 services:
-  web:
-    build:
-      context: ./
-    volumes:
-      - .:/src
-    command: supervisor -e  'js,pug,html' index.js
+  app:
+    build: .
     ports:
       - "3000:3000"
     depends_on:
       - db
-  db:
-    image: mysql
-    restart: always
-    env_file:
-      - ./.env
-    ports:
-      - "3308:3306"
     volumes:
-      - ./db:/var/lib/mysql
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin:latest
+      - .:/app
+    command: npm start
+
+  db:
+    image: mysql:8
     restart: always
-    env_file:
-      - ./.env
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: sprint3
     ports:
-      - "8081:80"
+      - "3306:3306"
+    volumes:
+      - ./sd2-db.sql:/docker-entrypoint-initdb.d/init.sql

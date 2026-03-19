@@ -1,55 +1,40 @@
-// Import express.js
-const express = require("express");
+const express = require('express');
+const session = require('express-session');
+const path = require('path');
 
-// Create express app
+const authRoutes = require('./routes/auth');
+const userRoutes = require('./routes/users');
+const postRoutes = require('./routes/posts');
+const aboutRoutes = require('./routes/about'); // ✅ NEW
+
 const app = express();
 
-// Add static files location
-app.use(express.static("static"));
+// VIEW ENGINE
+app.set('view engine', 'pug');
+app.set('views', path.join(__dirname, 'views'));
 
-// Import database functions
-const db = require("./services/db");
+// MIDDLEWARE
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, '../static')));
 
-// --------------------------------------------------
-// Root route – project identification
-// --------------------------------------------------
-app.get("/", function (req, res) {
-    res.send("Game Tips and Tricks – Community Platform");
+app.use(session({
+    secret: 'gaming-secret',
+    resave: false,
+    saveUninitialized: true
+}));
+
+// ROUTES
+app.use('/', authRoutes);
+app.use('/users', userRoutes);
+app.use('/posts', postRoutes);
+app.use('/about', aboutRoutes); 
+
+// HOME
+app.get('/', (req, res) => {
+    res.redirect('/posts');
 });
 
-// --------------------------------------------------
-// Database test route (Sprint 1 level)
-// --------------------------------------------------
-app.get("/db_test", function (req, res) {
-    // Simple test query to confirm database connection
-    const sql = "SHOW TABLES";
-    db.query(sql)
-        .then(results => {
-            res.send(results);
-        })
-        .catch(err => {
-            console.error(err);
-            res.status(500).send("Database connection failed");
-        });
-});
-
-// --------------------------------------------------
-// Example route related to project theme
-// --------------------------------------------------
-app.get("/tips", function (req, res) {
-    res.send("Browse and share game tips and tricks");
-});
-
-// --------------------------------------------------
-// Dynamic route – user example (community focus)
-// --------------------------------------------------
-app.get("/hello/:username", function (req, res) {
-    res.send("Welcome to Game Tips and Tricks, " + req.params.username);
-});
-
-// --------------------------------------------------
-// Start server
-// --------------------------------------------------
-app.listen(3000, function () {
-    console.log("Game Tips and Tricks running at http://127.0.0.1:3000/");
+// IMPORTANT FOR DOCKER
+app.listen(3000, '0.0.0.0', () => {
+    console.log("🎮 Gaming Platform running at http://localhost:3000");
 });

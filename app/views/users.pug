@@ -1,0 +1,8 @@
+extends layout
+
+block content
+  h1 Users
+
+  each user in users
+    .card
+      a(href="/users/" + user.id)= user.username

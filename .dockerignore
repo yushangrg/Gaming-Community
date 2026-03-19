@@ -1,3 +1,9 @@
-.git
 node_modules
-npm-debug.log
+.git
+.gitignore
+.env
+
+# ❗ FIX THIS ISSUE
+*.sock
+db/mysql.sock
+SECoursework/db/mysql.sock

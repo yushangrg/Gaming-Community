@@ -1,0 +1,10 @@
+extends layout
+
+block content
+  h1 Posts
+
+  each post in posts
+    .card
+      h3
+        a(href="/posts/" + post.id)= post.title
+      p By #{post.username}

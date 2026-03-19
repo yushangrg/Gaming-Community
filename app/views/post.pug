@@ -1,0 +1,11 @@
+extends layout
+
+block content
+  .card
+    h1= post.title
+    p= post.content
+    p Author: #{post.username}
+
+    h3 Tags
+    each tag in tags
+      span.tag= tag.name

@@ -1,0 +1,9 @@
+extends layout
+
+block content
+  .card.center-card
+    h1 Login
+    form(method="POST" id="loginForm")
+      input(type="text" name="username" placeholder="Username")
+      input(type="password" name="password" placeholder="Password")
+      button(type="submit") Login
