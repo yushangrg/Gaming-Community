@@ -1,21 +1,35 @@
 extends layout
 
 block content
-  .card
-    img(src="/images/" + post.image width="100%")
+  .main
+    h2 🎮 #{post.title}
 
-    h1= post.title
-    p= post.content
+    .container
+      // LEFT SIDE (VIDEO / IMAGE)
+      .main-content
+        img(src=`/images/${post.image || 'default.png'}` style="width:100%; height:400px; object-fit:cover;")
 
-    p Author: #{post.username}
+        h3= post.title
+        p By #{post.username}
 
-    p ⭐ Rating: #{post.rating} / 5
-    p 👍 Likes: #{post.likes}
+        .actions
+          button 👍 Like (#{post.likes})
+          button 💬 Comment
 
-    h3 Tags
-    each tag in tags
-      span.tag= tag.name
+        p ⭐ Rating: #{post.rating} / 5
 
-    h3 💬 Comments
-    each comment in comments
-      p #{comment.username}: #{comment.content}
+        h4 Tags
+        each tag in tags
+          a(href=`/posts?tag=${tag.name}` style="margin-right:10px") #{tag.name}
+
+      // RIGHT SIDE (COMMENTS)
+      .sidebar
+        h3 Comments
+
+        if comments.length === 0
+          p No comments yet.
+
+        each comment in comments
+          .card
+            p #{comment.content}
+            small by #{comment.username}

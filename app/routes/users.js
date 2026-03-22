@@ -4,7 +4,7 @@ const db = require('../services/db');
 const router = express.Router();
 
 // ======================
-// USERS LIST (IMPROVED)
+// USERS LIST
 // ======================
 router.get('/', async (req, res) => {
     try {
@@ -17,6 +17,7 @@ router.get('/', async (req, res) => {
         `);
 
         res.render('users', { users });
+
     } catch (err) {
         console.error(err);
         res.status(500).send("Server Error");
@@ -25,26 +26,67 @@ router.get('/', async (req, res) => {
 
 
 // ======================
-// PROFILE PAGE (IMPROVED)
+// LOGGED-IN PROFILE (/profile)
 // ======================
 router.get('/profile', async (req, res) => {
-    if (!req.session.user) {
-        return res.redirect('/login');
+    try {
+        if (!req.session.user) {
+            return res.render('profile', { user: null, posts: [] });
+        }
+
+        const userId = req.session.user.id;
+
+        const [users] = await db.query(
+            'SELECT * FROM users WHERE id=?',
+            [userId]
+        );
+
+        const [posts] = await db.query(
+            'SELECT * FROM posts WHERE user_id=?',
+            [userId]
+        );
+
+        res.render('profile', {
+            user: users[0],
+            posts
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Server Error");
     }
-
-    const userId = req.session.user.id;
-
-    const [users] = await db.query(
-        'SELECT * FROM users WHERE id=?',
-        [userId]
-    );
-
-    const [posts] = await db.query(
-        'SELECT * FROM posts WHERE user_id=?',
-        [userId]
-    );
-
-    res.render('profile', { user: users[0], posts });
 });
+
+
+// ======================
+// PUBLIC PROFILE (/users/:id)
+// ======================
+router.get('/:id', async (req, res) => {
+    try {
+        const [users] = await db.query(
+            'SELECT * FROM users WHERE id=?',
+            [req.params.id]
+        );
+
+        if (!users.length) {
+            return res.status(404).send("User not found");
+        }
+
+        const [posts] = await db.query(
+            'SELECT * FROM posts WHERE user_id=?',
+            [req.params.id]
+        );
+
+        res.render('profile', {
+            user: users[0],
+            posts
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Server Error");
+    }
+});
+
 
 module.exports = router;

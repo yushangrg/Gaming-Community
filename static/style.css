@@ -4,13 +4,14 @@ body {
   background: #f4f4f4;
 }
 
-/* NAVBAR */
+/* ================= NAVBAR ================= */
 .navbar {
   background: #111;
   color: white;
   padding: 15px 30px;
   display: flex;
   justify-content: space-between;
+  align-items: center;
 }
 
 .navbar a {
@@ -19,16 +20,24 @@ body {
   text-decoration: none;
 }
 
-/* LAYOUT */
-.container {
-  display: flex;
+.navbar a:hover {
+  text-decoration: underline;
 }
 
-/* SIDEBAR */
+/* ================= LAYOUT ================= */
+.container {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+/* ================= SIDEBAR ================= */
 .sidebar {
   width: 220px;
   background: #eaeaea;
   padding: 20px;
+  min-height: 100vh;
+  border-radius: 8px;
 }
 
 .sidebar ul {
@@ -36,24 +45,46 @@ body {
   list-style: none;
 }
 
-/* MAIN */
+.sidebar li {
+  margin-bottom: 10px;
+}
+
+.sidebar a {
+  text-decoration: none;
+  color: black;
+  display: block;
+  padding: 8px;
+  border-radius: 5px;
+}
+
+.sidebar a:hover {
+  background: #ddd;
+}
+
+/* ================= MAIN ================= */
 .main {
   flex: 1;
   padding: 20px;
 }
 
-/* CARDS */
+/* ================= CARDS ================= */
 .card {
   background: white;
   padding: 15px;
-  border-radius: 8px;
+  border-radius: 10px;
   margin-bottom: 20px;
+  transition: 0.2s;
 }
 
-/* POSTS */
+.card:hover {
+  transform: scale(1.01);
+}
+
+/* ================= POSTS ================= */
 .post {
   display: flex;
-  gap: 15px;
+  gap: 20px;
+  align-items: center;
 }
 
 .post img {
@@ -61,17 +92,42 @@ body {
   height: 100px;
   object-fit: cover;
   background: #ccc;
-}
-
-/* USERS */
-.user-card {
-  background: #eee;
-  padding: 15px;
-  margin-bottom: 10px;
   border-radius: 6px;
 }
 
-/* PROFILE */
+.post-info h3 {
+  margin: 0;
+}
+
+.post-info a {
+  text-decoration: none;
+  color: black;
+}
+
+.post-info a:hover {
+  color: #007bff;
+}
+
+/* ================= USERS ================= */
+.user-card {
+  background: white;
+  padding: 15px;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  transition: 0.2s;
+}
+
+.user-card:hover {
+  background: #f0f0f0;
+  transform: scale(1.01);
+}
+
+.user-card a {
+  text-decoration: none;
+  color: black;
+}
+
+/* ================= PROFILE ================= */
 .profile-header {
   margin-bottom: 20px;
 }
@@ -79,13 +135,115 @@ body {
 .clips {
   display: flex;
   gap: 20px;
+  flex-wrap: wrap;
 }
 
 .clip {
-  width: 250px;
-  height: 150px;
+  width: 280px;
+  height: 160px;
   background: #ccc;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.clip:hover {
+  background: #bbb;
+  transform: scale(1.02);
+}
+
+/* ================= PROFILE LOGIN CARD ================= */
+.center-card {
+  max-width: 400px;
+  margin: 80px auto;
+  text-align: center;
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+}
+
+.center-card button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  border: none;
+  background: #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.center-card button:hover {
+  background: #ccc;
+}
+
+/* ================= DETAIL PAGE ================= */
+.main-content {
+  flex: 2;
+}
+
+.video-box {
+  width: 100%;
+  height: 400px;
+  background: #ccc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  margin-bottom: 15px;
+}
+
+/* ACTION BUTTONS */
+.actions {
+  margin: 15px 0;
+}
+
+.actions button {
+  margin-right: 10px;
+  padding: 10px 14px;
+  border: none;
+  background: #e0e0e0;
+  cursor: pointer;
+  border-radius: 6px;
+  font-weight: bold;
+}
+
+.actions button:hover {
+  background: #d0d0d0;
+}
+
+/* COMMENTS */
+.comment-box {
+  background: white;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 768px) {
+  .container {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    min-height: auto;
+  }
+
+  .post {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .post img {
+    width: 100%;
+    height: auto;
+  }
+
+  .clips {
+    flex-direction: column;
+  }
 }

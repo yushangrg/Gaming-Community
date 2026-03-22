@@ -2,16 +2,24 @@ extends layout
 
 block content
   .main
-    .profile-header
-      h2= user.username
-      p 📄 Posts: #{posts.length}
+    if !user
+      .center-card
+        h3 Access Your Profile
+        p Please login or create an account
 
-    h3 User Posts
+        a(href="/login")
+          button Login
 
-    each post in posts
-      .card.post
-        img(src=`/images/${post.image || 'default.png'}`)
-        .post-info
-          h3= post.title
-          p ⭐ Rating: #{post.rating}
-          p 👍 Likes: #{post.likes}
+        a(href="/register")
+          button Create Account
+
+        p(style="margin-top:10px") Continue browsing as guest
+    else
+      .profile-header
+        h2= user.username
+        p 📄 #{posts.length} posts
+
+      .clips
+        each post in posts
+          a(href=`/posts/${post.id}`)
+            .clip Clip

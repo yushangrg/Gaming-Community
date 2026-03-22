@@ -2,6 +2,7 @@ extends layout
 
 block content
   .container
+    // SIDEBAR
     .sidebar
       h3 Categories
       ul
@@ -10,14 +11,34 @@ block content
         li: a(href="/posts?category=Sports") Sports
         li: a(href="/posts?category=Adventure") Adventure
 
+      h3 Tags
+      ul
+        li: a(href="/posts?tag=FPS") FPS
+        li: a(href="/posts?tag=RPG") RPG
+        li: a(href="/posts?tag=Tips") Tips
+        li: a(href="/posts?tag=Mobile") Mobile
+        li: a(href="/posts?tag=Indie") Indie
+
+    // MAIN CONTENT
     .main
       h2 🎮 Game Posts
 
-      each post in posts
-        .card.post
-          img(src="/images/default.png")
-          .post-info
-            h3= post.title
-            p By #{post.username || "Unknown"}
-            p ⭐ Rating: #{post.rating} / 5
-            p 👍 Likes: #{post.likes}
+      if posts.length === 0
+        p No posts found.
+
+      else
+        each post in posts
+          .card.post
+            // CLICKABLE IMAGE
+            a(href=`/posts/${post.id}`)
+              img(src=`/images/${post.image || 'default.png'}`)
+
+            .post-info
+              // CLICKABLE TITLE
+              a(href=`/posts/${post.id}`)
+                h3= post.title
+
+              p By #{post.username || "Unknown"}
+
+              p ⭐ Rating: #{post.rating} / 5
+              p 👍 Likes: #{post.likes}
