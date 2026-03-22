@@ -1,234 +1,91 @@
-/* ========================
-   RESET
-======================== */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-/* ========================
-   BODY (Gaming Gradient)
-======================== */
 body {
-  background: linear-gradient(135deg, #1f1c2c, #928dab);
-  min-height: 100vh;
-  color: #ffffff;
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f4f4f4;
 }
 
-/* ========================
-   NAVBAR
-======================== */
+/* NAVBAR */
 .navbar {
-  background: rgba(0, 0, 0, 0.9);
+  background: #111;
+  color: white;
   padding: 15px 30px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  border-bottom: 2px solid #00ffcc;
-}
-
-.navbar div {
-  display: flex;
-  align-items: center;
-}
-
-.navbar img {
-  margin-right: 10px;
-  border-radius: 8px;
 }
 
 .navbar a {
-  color: #00ffcc;
-  margin-right: 20px;
+  color: white;
+  margin-left: 15px;
   text-decoration: none;
-  font-weight: 500;
-  transition: 0.3s;
 }
 
-.navbar a:hover {
-  color: #ffffff;
-  text-shadow: 0 0 8px #00ffcc;
-}
-
-/* ========================
-   CONTAINER
-======================== */
+/* LAYOUT */
 .container {
-  max-width: 900px;
-  margin: 40px auto;
+  display: flex;
 }
 
-/* ========================
-   CARD DESIGN
-======================== */
-.card {
-  background: #2c2c3e;
+/* SIDEBAR */
+.sidebar {
+  width: 220px;
+  background: #eaeaea;
   padding: 20px;
-  margin-bottom: 25px;
-  border-radius: 15px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
-  transition: all 0.3s ease;
-  border: 1px solid transparent;
 }
 
-.card:hover {
-  transform: translateY(-6px);
-  border: 1px solid #00ffcc;
-  box-shadow: 0 0 20px #00ffcc55;
+.sidebar ul {
+  padding: 0;
+  list-style: none;
 }
 
-/* ========================
-   IMAGES (GAME TEASER)
-======================== */
-.card img {
-  width: 100%;
-  border-radius: 12px;
-  margin-bottom: 15px;
-  transition: 0.3s;
+/* MAIN */
+.main {
+  flex: 1;
+  padding: 20px;
 }
 
-.card img:hover {
-  transform: scale(1.02);
+/* CARDS */
+.card {
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
 }
 
-/* ========================
-   HEADINGS
-======================== */
-h1, h2, h3 {
+/* POSTS */
+.post {
+  display: flex;
+  gap: 15px;
+}
+
+.post img {
+  width: 160px;
+  height: 100px;
+  object-fit: cover;
+  background: #ccc;
+}
+
+/* USERS */
+.user-card {
+  background: #eee;
+  padding: 15px;
   margin-bottom: 10px;
+  border-radius: 6px;
 }
 
-/* ========================
-   LINKS
-======================== */
-a {
-  text-decoration: none;
-  color: #00ffcc;
+/* PROFILE */
+.profile-header {
+  margin-bottom: 20px;
 }
 
-a:hover {
-  color: #ffffff;
+.clips {
+  display: flex;
+  gap: 20px;
 }
 
-/* ========================
-   BUTTONS
-======================== */
-button {
-  background: linear-gradient(135deg, #00ffcc, #00bfa6);
-  color: #000;
-  border: none;
-  padding: 10px 15px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: 0.3s;
-}
-
-button:hover {
-  opacity: 0.85;
-  box-shadow: 0 0 10px #00ffcc;
-}
-
-/* ========================
-   INPUTS (FORMS)
-======================== */
-input {
-  width: 100%;
-  padding: 12px;
-  margin: 10px 0;
-  border-radius: 8px;
-  border: none;
-  outline: none;
-}
-
-/* ========================
-   FORM CENTERING (LOGIN)
-======================== */
-.center-card {
-  max-width: 400px;
-  margin: 80px auto;
-}
-
-/* ========================
-   TAGS
-======================== */
-.tag {
-  display: inline-block;
-  background: #00ffcc;
-  color: #000;
-  padding: 5px 12px;
-  border-radius: 20px;
-  margin: 5px 5px 0 0;
-  font-size: 12px;
-  font-weight: bold;
-}
-
-/* ========================
-   RATINGS + LIKES
-======================== */
-.card p {
-  margin: 6px 0;
-  font-size: 14px;
-}
-
-.card p:nth-child(5) {
-  color: #ffd700; /* gold for rating */
-}
-
-.card p:nth-child(6) {
-  color: #00ffcc; /* neon for likes */
-}
-
-/* ========================
-   COMMENTS SECTION
-======================== */
-.comments {
-  margin-top: 15px;
-  padding-top: 10px;
-  border-top: 1px solid #555;
-}
-
-.comments p {
-  background: #1e1e2f;
-  padding: 8px;
-  border-radius: 8px;
-  margin-bottom: 6px;
-  font-size: 13px;
-}
-
-/* ========================
-   LISTS (About Page)
-======================== */
-ul {
-  margin-left: 20px;
-  margin-top: 10px;
-}
-
-li {
-  margin-bottom: 6px;
-}
-
-/* ========================
-   ERROR MESSAGE
-======================== */
-.error {
-  color: #ff4d4d;
-  margin-top: 10px;
-  text-align: center;
-}
-
-/* ========================
-   RESPONSIVE
-======================== */
-@media (max-width: 600px) {
-  .container {
-    padding: 10px;
-  }
-
-  .navbar {
-    flex-direction: column;
-    align-items: flex-start;
-  }
+.clip {
+  width: 250px;
+  height: 150px;
+  background: #ccc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }

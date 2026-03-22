@@ -1,10 +1,17 @@
 extends layout
 
 block content
-  .card
-    h1= user.username
+  .main
+    .profile-header
+      h2= user.username
+      p 📄 Posts: #{posts.length}
 
-  h2 Posts
-  each post in posts
-    .card
-      p= post.title
+    h3 User Posts
+
+    each post in posts
+      .card.post
+        img(src=`/images/${post.image || 'default.png'}`)
+        .post-info
+          h3= post.title
+          p ⭐ Rating: #{post.rating}
+          p 👍 Likes: #{post.likes}

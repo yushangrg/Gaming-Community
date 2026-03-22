@@ -1,8 +1,17 @@
 extends layout
 
 block content
-  h1 Users
+  .main
+    h2 👥 Users
 
-  each user in users
-    .card
-      a(href="/users/" + user.id)= user.username
+    if users.length === 0
+      p No users found.
+
+    else
+      each user in users
+        .user-card
+          a(href=`/users/${user.id}`)
+            h3= user.username
+
+          p 📄 Posts: #{user.post_count}
+          p ⭐ Rating: #{user.post_count + 3}.0

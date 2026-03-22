@@ -1,16 +1,23 @@
 extends layout
 
 block content
-  h1 🎮 Game Posts
+  .container
+    .sidebar
+      h3 Categories
+      ul
+        li: a(href="/posts") All
+        li: a(href="/posts?category=Action") Action
+        li: a(href="/posts?category=Sports") Sports
+        li: a(href="/posts?category=Adventure") Adventure
 
-  each post in posts
-    .card
-      img(src="/images/" + post.image width="100%")
+    .main
+      h2 🎮 Game Posts
 
-      h3
-        a(href="/posts/" + post.id)= post.title
-
-      p By #{post.username}
-
-      p ⭐ Rating: #{post.rating} / 5
-      p 👍 Likes: #{post.likes}
+      each post in posts
+        .card.post
+          img(src="/images/default.png")
+          .post-info
+            h3= post.title
+            p By #{post.username || "Unknown"}
+            p ⭐ Rating: #{post.rating} / 5
+            p 👍 Likes: #{post.likes}

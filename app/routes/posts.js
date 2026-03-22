@@ -3,39 +3,70 @@ const db = require('../services/db');
 
 const router = express.Router();
 
-// LISTING PAGE
+// ======================
+// LISTING PAGE (with category filter)
+// ======================
 router.get('/', async (req, res) => {
-    const [posts] = await db.query(`
-        SELECT posts.*, users.username 
-        FROM posts 
-        JOIN users ON posts.user_id = users.id
-    `);
+    try {
+        const category = req.query.category;
 
-    res.render('index', { posts });
+        let query = `
+            SELECT posts.*, users.username 
+            FROM posts 
+            JOIN users ON posts.user_id = users.id
+        `;
+
+        let params = [];
+
+        // ✅ If category is selected
+        if (category) {
+            query += ' WHERE posts.category = ?';
+            params.push(category);
+        }
+
+        const [posts] = await db.query(query, params);
+
+        res.render('index', { posts, category });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Server Error");
+    }
 });
 
+
+// ======================
 // DETAIL PAGE
+// ======================
 router.get('/:id', async (req, res) => {
-    const [posts] = await db.query(`
-        SELECT posts.*, users.username 
-        FROM posts 
-        JOIN users ON posts.user_id = users.id
-        WHERE posts.id=?
-    `, [req.params.id]);
+    try {
+        const [posts] = await db.query(`
+            SELECT posts.*, users.username 
+            FROM posts 
+            JOIN users ON posts.user_id = users.id
+            WHERE posts.id=?
+        `, [req.params.id]);
 
-    const [tags] = await db.query(`
-        SELECT tags.name FROM tags
-        JOIN post_tags ON tags.id = post_tags.tag_id
-        WHERE post_tags.post_id=?
-    `, [req.params.id]);
+        const [tags] = await db.query(`
+            SELECT tags.name FROM tags
+            JOIN post_tags ON tags.id = post_tags.tag_id
+            WHERE post_tags.post_id=?
+        `, [req.params.id]);
 
-    // ✅ NEW: COMMENTS
-    const [comments] = await db.query(
-        'SELECT * FROM comments WHERE post_id=?',
-        [req.params.id]
-    );
+        const [comments] = await db.query(
+            'SELECT * FROM comments WHERE post_id=?',
+            [req.params.id]
+        );
 
-    res.render('post', { post: posts[0], tags, comments });
+        res.render('post', { 
+            post: posts[0], 
+            tags, 
+            comments 
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Server Error");
+    }
 });
 
 module.exports = router;
