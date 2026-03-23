@@ -7,7 +7,7 @@ body {
 
   display: flex;
   flex-direction: column;
-  min-height: 100vh; /* ✅ important for footer */
+  min-height: 100vh; 
 }
 
 /* ================= NAVBAR ================= */
@@ -78,7 +78,7 @@ body {
 
 /* ================= MAIN ================= */
 .main {
-  flex: 1; /* ✅ pushes footer down */
+  flex: 1; 
   padding: 10px;
 }
 
