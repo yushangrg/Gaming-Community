@@ -1,12 +1,18 @@
+/* ================= GLOBAL ================= */
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
-  background: #f4f4f4;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: #f5f7fb;
+  color: #333;
+
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; /* ✅ important for footer */
 }
 
 /* ================= NAVBAR ================= */
 .navbar {
-  background: #111;
+  background: #0d1117;
   color: white;
   padding: 15px 30px;
   display: flex;
@@ -15,13 +21,14 @@ body {
 }
 
 .navbar a {
-  color: white;
-  margin-left: 15px;
+  color: #c9d1d9;
+  margin-left: 18px;
   text-decoration: none;
+  font-size: 14px;
 }
 
 .navbar a:hover {
-  text-decoration: underline;
+  color: white;
 }
 
 /* ================= LAYOUT ================= */
@@ -29,15 +36,21 @@ body {
   display: flex;
   align-items: flex-start;
   gap: 20px;
+  padding: 20px;
 }
 
 /* ================= SIDEBAR ================= */
 .sidebar {
   width: 220px;
-  background: #eaeaea;
+  background: #ffffff;
   padding: 20px;
   min-height: 100vh;
-  border-radius: 8px;
+  border-radius: 12px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+}
+
+.sidebar h3 {
+  margin-top: 0;
 }
 
 .sidebar ul {
@@ -51,33 +64,36 @@ body {
 
 .sidebar a {
   text-decoration: none;
-  color: black;
+  color: #555;
   display: block;
   padding: 8px;
-  border-radius: 5px;
+  border-radius: 6px;
+  transition: 0.2s;
 }
 
 .sidebar a:hover {
-  background: #ddd;
+  background: #eef2ff;
+  color: #3b82f6;
 }
 
 /* ================= MAIN ================= */
 .main {
-  flex: 1;
-  padding: 20px;
+  flex: 1; /* ✅ pushes footer down */
+  padding: 10px;
 }
 
 /* ================= CARDS ================= */
 .card {
   background: white;
-  padding: 15px;
-  border-radius: 10px;
+  padding: 18px;
+  border-radius: 12px;
   margin-bottom: 20px;
   transition: 0.2s;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.05);
 }
 
 .card:hover {
-  transform: scale(1.01);
+  transform: translateY(-3px);
 }
 
 /* ================= POSTS ================= */
@@ -91,8 +107,8 @@ body {
   width: 160px;
   height: 100px;
   object-fit: cover;
-  background: #ccc;
-  border-radius: 6px;
+  background: #ddd;
+  border-radius: 8px;
 }
 
 .post-info h3 {
@@ -101,11 +117,12 @@ body {
 
 .post-info a {
   text-decoration: none;
-  color: black;
+  color: #111;
+  font-weight: 600;
 }
 
 .post-info a:hover {
-  color: #007bff;
+  color: #3b82f6;
 }
 
 /* ================= USERS ================= */
@@ -113,18 +130,19 @@ body {
   background: white;
   padding: 15px;
   margin-bottom: 15px;
-  border-radius: 8px;
+  border-radius: 10px;
   transition: 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
 .user-card:hover {
-  background: #f0f0f0;
-  transform: scale(1.01);
+  background: #f9fbff;
+  transform: translateY(-2px);
 }
 
 .user-card a {
   text-decoration: none;
-  color: black;
+  color: #111;
 }
 
 /* ================= PROFILE ================= */
@@ -141,28 +159,33 @@ body {
 .clip {
   width: 280px;
   height: 160px;
-  background: #ccc;
+  background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 10px;
   cursor: pointer;
   transition: 0.2s;
+  font-weight: bold;
 }
 
 .clip:hover {
-  background: #bbb;
-  transform: scale(1.02);
+  transform: scale(1.05);
 }
 
 /* ================= PROFILE LOGIN CARD ================= */
 .center-card {
   max-width: 400px;
-  margin: 80px auto;
+  margin: 100px auto;
   text-align: center;
   background: white;
   padding: 30px;
-  border-radius: 12px;
+  border-radius: 14px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+}
+
+.center-card h3 {
+  margin-bottom: 10px;
 }
 
 .center-card button {
@@ -170,13 +193,27 @@ body {
   padding: 10px;
   margin-top: 10px;
   border: none;
-  background: #ddd;
+  background: #e5e7eb;
   border-radius: 6px;
   cursor: pointer;
+  transition: 0.2s;
 }
 
 .center-card button:hover {
-  background: #ccc;
+  background: #d1d5db;
+}
+
+/* GUEST LINK */
+.guest-link {
+  display: block;
+  margin-top: 12px;
+  color: #3b82f6;
+  cursor: pointer;
+  text-align: center;
+}
+
+.guest-link:hover {
+  text-decoration: underline;
 }
 
 /* ================= DETAIL PAGE ================= */
@@ -187,11 +224,11 @@ body {
 .video-box {
   width: 100%;
   height: 400px;
-  background: #ccc;
+  background: #ddd;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
+  border-radius: 12px;
   margin-bottom: 15px;
 }
 
@@ -204,14 +241,15 @@ body {
   margin-right: 10px;
   padding: 10px 14px;
   border: none;
-  background: #e0e0e0;
+  background: #e5e7eb;
   cursor: pointer;
   border-radius: 6px;
   font-weight: bold;
+  transition: 0.2s;
 }
 
 .actions button:hover {
-  background: #d0d0d0;
+  background: #d1d5db;
 }
 
 /* COMMENTS */
@@ -219,7 +257,62 @@ body {
   background: white;
   padding: 10px;
   margin-bottom: 10px;
-  border-radius: 6px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+/* ================= FOOTER ================= */
+.footer {
+  background: #0d1117;
+  color: #c9d1d9;
+  padding: 30px 20px;
+  margin-top: auto;
+}
+
+.footer-container {
+  max-width: 1200px;
+  margin: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.footer-left {
+  flex: 1;
+}
+
+.footer-left p {
+  margin: 5px 0;
+}
+
+.footer-left .small {
+  font-size: 13px;
+  color: #8b949e;
+}
+
+.footer-links {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.footer-links a {
+  color: #c9d1d9;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.footer-links a:hover {
+  color: white;
+}
+
+.footer-right {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
 }
 
 /* ================= RESPONSIVE ================= */
@@ -245,5 +338,15 @@ body {
 
   .clips {
     flex-direction: column;
+  }
+
+  .footer-container {
+    flex-direction: column;
+    gap: 20px;
+    text-align: center;
+  }
+
+  .footer-right {
+    justify-content: center;
   }
 }
