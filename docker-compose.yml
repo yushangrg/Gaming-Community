@@ -24,7 +24,7 @@ services:
     image: phpmyadmin/phpmyadmin
     restart: always
     ports:
-      - "8081:80"   # ← use 8080
+      - "8081:80"   
     environment:
       PMA_HOST: db
       PMA_USER: root

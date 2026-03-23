@@ -57,50 +57,60 @@ Once in the database container, you can get a MySQL CLI in the usual way
 ```bash
 mysql -uroot -p<password> 
 ```
-# 🎮 Game Tips & Tricks
+# 🎮 Gaming Community Platform
 
 ## 📌 Overview
-Game Tips & Tricks is a community-based gaming platform where players can **share**, **learn**, and **improve** through gameplay tips, short video clips, and game-specific discussion rooms.
+Gaming Community is a web-based platform where users can **browse game posts**, **view gameplay tips**, and **interact with other players**.
 
-The project focuses on building a **collaborative gaming community** inspired by content platforms and Discord-style interaction.
+The system allows users to explore content by categories and tags, view detailed posts, and access user profiles. It is designed as a simplified community platform inspired by modern gaming content sites.
 
 ---
 
-## 🎯 Features (Planned)
-- User login and signup
-- Browse games by category
-- Watch gameplay tips and clips
-- Like, comment, save, and gift clips
-- Search games, clips, and creators
-- Join game rooms and team-up channels
-- Creator profiles and messaging
+## 🎯 Features (Implemented - Sprint 3)
+- ✅ User registration and login (authentication system)
+- ✅ Browse posts (listing page)
+- ✅ View post details (detail page with comments)
+- ✅ Users list page
+- ✅ User profile page (protected – requires login)
+- ✅ Categories and tags sidebar
+- ✅ Session-based login system
+- ✅ Responsive UI with modern design
+- ✅ Database integration (MySQL)
 
 ---
 
 ## 🛠 Tech Stack
-- Frontend: HTML, CSS, JavaScript (PUG)
+- Frontend: HTML, CSS, Pug
 - Backend: Node.js, Express.js
 - Database: MySQL
+- Containerization: Docker
 - Project Management: GitHub Projects (Kanban)
-- Diagrams: PlantUML
-- Design: Low-fidelity wireframes (Sprint 2)
 
 ---
 
-## 🚀 Agile & Sprint Status
-- Sprint 1: Idea & requirements
-- Sprint 2: Documentation, wireframes, and UML diagrams
-- Sprint 3 (Next): MVP development
+## 🚀 Agile & Sprint Progress
+- Sprint 1: Idea, requirements, and planning
+- Sprint 2: Wireframes, UML diagrams, and design
+- Sprint 3: MVP development (core features implemented)
 
 ---
 
 ## 📋 Project Management
-Tasks are managed using a GitHub Kanban board with:
+Tasks are tracked using a GitHub Kanban board:
 **Backlog → Ready → In Progress → In Review → Done**
 
 ---
 
-## 📎 Status
-**Current Sprint:** Sprint 2  
-**Stage:** Design & planning complete, ready for development
+## 📎 Current Status
+**Current Sprint:** Sprint 3  
+**Stage:** MVP Completed (Core functionality working)
+
+---
+
+## 🔮 Future Improvements (Next Sprint)
+- 🔹 Like and comment interaction system (fully dynamic)
+- 🔹 Search functionality
+- 🔹 Pagination for posts
+- 🔹 Real-time chat / game rooms
+- 🔹 User profile enhancements (avatars, stats)
 
