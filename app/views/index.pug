@@ -2,15 +2,15 @@ extends layout
 
 block content
   .container
-    // SIDEBAR
     .sidebar
       h3 Categories
       ul
         li: a(href="/posts") All
-        li: a(href="/posts?category=Action") Action
-        li: a(href="/posts?category=Sports") Sports
-        li: a(href="/posts?category=Adventure") Adventure
-
+        li: a(href="/posts?category=FPS") FPS
+        li: a(href="/posts?category=RPG") RPG
+        li: a(href="/posts?category=Tips") Tips
+        li: a(href="/posts?category=Mobile") Mobile
+        li: a(href="/posts?category=Indie") Indie
       h3 Tags
       ul
         li: a(href="/posts?tag=FPS") FPS
@@ -18,27 +18,24 @@ block content
         li: a(href="/posts?tag=Tips") Tips
         li: a(href="/posts?tag=Mobile") Mobile
         li: a(href="/posts?tag=Indie") Indie
-
-    // MAIN CONTENT
     .main
       h2 🎮 Game Posts
-
+      form(action="/posts" method="GET" style="margin-bottom:16px;")
+        input(type="text" name="search" placeholder="Search posts..." value=search style="padding:8px; width:70%; margin-right:8px;")
+        button(type="submit" style="padding:8px 16px;") 🔍 Search
+      if user
+        a(href="/posts/create")
+          button(style="margin-bottom:16px; padding:10px 20px;") ✍️ Create New Post
       if posts.length === 0
         p No posts found.
-
       else
         each post in posts
           .card.post
-            // CLICKABLE IMAGE
             a(href=`/posts/${post.id}`)
               img(src=`/images/${post.image || 'default.png'}`)
-
             .post-info
-              // CLICKABLE TITLE
               a(href=`/posts/${post.id}`)
                 h3= post.title
-
               p By #{post.username || "Unknown"}
-
               p ⭐ Rating: #{post.rating} / 5
               p 👍 Likes: #{post.likes}
