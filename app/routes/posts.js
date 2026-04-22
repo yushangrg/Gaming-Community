@@ -86,5 +86,42 @@ router.get('/:id/like', async (req, res) => {
         res.status(500).send("Server Error");
     }
 });
+// ======================
+// CREATE POST PAGE
+// ======================
+router.get('/create', async (req, res) => {
+    try {
+        if (!req.session.user) {
+            return res.redirect('/login');
+        }
+        res.render('create-post');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Server Error");
+    }
+});
+
+// ======================
+// CREATE POST SUBMIT
+// ======================
+router.post('/create', async (req, res) => {
+    try {
+        if (!req.session.user) {
+            return res.redirect('/login');
+        }
+        const { title, content, category } = req.body;
+        const user_id = req.session.user.id;
+
+        await db.query(
+            'INSERT INTO posts (title, content, category, user_id, likes, rating) VALUES (?, ?, ?, ?, 0, 0)',
+            [title, content, category, user_id]
+        );
+
+        res.redirect('/posts');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Server Error");
+    }
+});
 
 module.exports = router;
