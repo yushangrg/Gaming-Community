@@ -1,41 +1,31 @@
-doctype html
+﻿doctype html
 html
   head
     title Gaming Community
     link(rel="stylesheet", href="/style.css")
-
   body
-
-    // ================= NAVBAR =================
     .navbar
       div GAMING-COMMUNITY
       div
         a(href="/") Home
         a(href="/users") Users
         a(href="/profile") Profile
-       if !user
+        if !user
           a(href="/login") Login
         else
-          a(href="/posts/create") ✍️ Create Post
+          a(href="/posts/create") Create Post
           a(href="/logout") Logout
-    // ================= MAIN CONTENT =================
     block content
-
-    // ================= FOOTER =================
     footer.footer
       .footer-container
-
         .footer-left
-          p © 2025 Gaming Community
-          p.small Independent platform. All game content & trademarks belong to their respective owners.
-
+          p 2025 Gaming Community
+          p.small Independent platform. All game content and trademarks belong to their respective owners.
         .footer-links
           a(href="/about") About
           a(href="#") Privacy Policy
           a(href="#") Terms of Service
           a(href="#") Support
-
         .footer-right
-          span 🌐 EN
-          span.social 📸
-          span.social 🎮
+          span EN
+          span.social Gaming

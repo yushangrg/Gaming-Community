@@ -1,0 +1,29 @@
+extends layout
+
+block content
+  .card
+    h2 ✍️ Create New Post
+
+    form(action="/posts/create" method="POST")
+      div(style="margin-bottom:16px;")
+        label Title
+        br
+        input(type="text" name="title" placeholder="Post title..." style="width:100%; padding:8px; margin-top:4px;")
+
+      div(style="margin-bottom:16px;")
+        label Category
+        br
+        select(name="category" style="width:100%; padding:8px; margin-top:4px;")
+          option(value="FPS") FPS
+          option(value="RPG") RPG
+          option(value="Tips") Tips
+          option(value="Mobile") Mobile
+          option(value="Indie") Indie
+          option(value="Other") Other
+
+      div(style="margin-bottom:16px;")
+        label Content
+        br
+        textarea(name="content" rows="6" placeholder="Write your post..." style="width:100%; padding:8px; margin-top:4px;")
+
+      button(type="submit" style="padding:10px 24px;") 🚀 Publish Post
