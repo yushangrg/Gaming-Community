@@ -68,5 +68,23 @@ router.get('/:id', async (req, res) => {
         res.status(500).send("Server Error");
     }
 });
+// ======================
+// LIKE A POST
+// ======================
+router.get('/:id/like', async (req, res) => {
+    try {
+        if (!req.session.user) {
+            return res.redirect('/login');
+        }
+        await db.query(
+            'UPDATE posts SET likes = likes + 1 WHERE id = ?',
+            [req.params.id]
+        );
+        res.redirect('/posts/' + req.params.id);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Server Error");
+    }
+});
 
 module.exports = router;

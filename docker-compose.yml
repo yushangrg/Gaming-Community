@@ -1,5 +1,5 @@
 services:
-  app:
+ app:
     build: .
     ports:
       - "3000:3000"
@@ -7,7 +7,13 @@ services:
       - db
     volumes:
       - .:/app
-    command: sh -c "npm install && npm start"
+      - /app/node_modules
+    environment:
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=root
+      - DB_NAME=sprint3
+    command: npm start
 
   db:
     image: mysql:8
