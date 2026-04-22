@@ -2,10 +2,9 @@ extends layout
 
 block content
   .main
-    h2 🎮 #{post.title}
+    h2 #{post.title}
 
     .container
-      // LEFT SIDE (VIDEO / IMAGE)
       .main-content
         img(src=`https://placehold.co/800x400/1a1a2e/ffffff?text=${post.category || 'Gaming'}` style="width:100%; height:400px; object-fit:cover;")
 
@@ -13,16 +12,30 @@ block content
         p By #{post.username}
 
         .actions
-          button 👍 Like (#{post.likes})
-          button 💬 Comment
+          a(href=`/posts/${post.id}/like`)
+            button Like (#{post.likes})
 
-        p ⭐ Rating: #{post.rating} / 5
+        p Rating: #{post.rating ? parseFloat(post.rating).toFixed(1) : '0'} / 5
+
+        if user
+          h4 Rate this post
+          form(action=`/posts/${post.id}/rate` method="POST" style="margin-bottom:16px;")
+            select(name="rating" style="padding:8px; margin-right:8px;")
+              option(value="1") 1 Star
+              option(value="2") 2 Stars
+              option(value="3") 3 Stars
+              option(value="4") 4 Stars
+              option(value="5") 5 Stars
+            button(type="submit" style="padding:8px 16px;") Submit Rating
+        else
+          p
+            a(href="/login") Login
+            |  to rate this post
 
         h4 Tags
         each tag in tags
           a(href=`/posts?tag=${tag.name}` style="margin-right:10px") #{tag.name}
 
-      // RIGHT SIDE (COMMENTS)
       .sidebar
         h3 Comments
 
@@ -33,3 +46,14 @@ block content
           .card
             p #{comment.content}
             small by #{comment.username}
+
+        if user
+          h4 Leave a Comment
+          form(action=`/posts/${post.id}/comment` method="POST")
+            textarea(name="content" rows="3" placeholder="Write your comment..." style="width:100%; padding:8px; margin-bottom:8px;")
+            br
+            button(type="submit" style="padding:8px 16px;") Post Comment
+        else
+          p
+            a(href="/login") Login
+            |  to leave a comment

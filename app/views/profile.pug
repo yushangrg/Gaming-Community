@@ -16,10 +16,20 @@ block content
         p(style="margin-top:10px") Continue browsing as guest
     else
       .profile-header
-        h2= user.username
+        h2 👤 #{user.username}
+        p 📧 #{user.email}
         p 📄 #{posts.length} posts
 
-      .clips
-        each post in posts
-          a(href=`/posts/${post.id}`)
-            .clip Clip
+      h3 Your Posts
+      if posts.length === 0
+        p You have not created any posts yet.
+        a(href="/posts/create")
+          button ✍️ Create your first post
+      else
+        .clips
+          each post in posts
+            a(href=`/posts/${post.id}`)
+              .clip
+                p #{post.title}
+                p ⭐ #{post.rating} / 5
+                p 👍 #{post.likes} likes
