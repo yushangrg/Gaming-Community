@@ -1,13 +1,20 @@
-FROM node:18-slim
+# Base image to use
+FROM node:latest
 
-WORKDIR /app
+# set a working directory
+WORKDIR /src
 
-COPY package*.json ./
+# Copy across project configuration information
+# Install application dependencies
+COPY package*.json /src/
 
-RUN apt-get update && apt-get install -y python3 make g++ \
-    && npm install \
-    && apt-get clean
+# Ask npm to install the dependencies
+RUN npm install -g supervisor && npm install && npm install supervisor
 
-COPY . .
+# Copy across all our files
+COPY . /src
 
-CMD ["npm", "start"]
+# Expose our application port (3000)
+EXPOSE 3000
+
+

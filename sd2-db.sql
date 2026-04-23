@@ -100,3 +100,22 @@ INSERT INTO comments (content, post_id, username) VALUES
 ('These setup tips helped me a lot!', 3, 'proPlayer'),
 ('Mobile gaming is the future!', 4, 'player1'),
 ('Indie games are underrated!', 5, 'gamerX');
+
+-- Add category column to posts
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS category VARCHAR(50);
+
+-- Update existing posts with categories
+UPDATE posts SET category = 'FPS' WHERE id = 1;
+UPDATE posts SET category = 'RPG' WHERE id = 2;
+UPDATE posts SET category = 'Tips' WHERE id = 3;
+UPDATE posts SET category = 'Mobile' WHERE id = 4;
+UPDATE posts SET category = 'Indie' WHERE id = 5;
+
+-- Create post_ratings table
+CREATE TABLE IF NOT EXISTS post_ratings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    post_id INT,
+    user_id INT,
+    rating INT,
+    UNIQUE KEY unique_rating (post_id, user_id)
+);
