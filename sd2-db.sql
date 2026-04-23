@@ -1,121 +1,113 @@
-CREATE DATABASE IF NOT EXISTS sprint3;
+DROP DATABASE IF EXISTS sprint3;
+CREATE DATABASE sprint3;
 USE sprint3;
 
+-- =========================
+-- USERS
+-- =========================
 CREATE TABLE users (
- id INT AUTO_INCREMENT PRIMARY KEY,
- username VARCHAR(50),
- email VARCHAR(100),
- password VARCHAR(255)
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(100) NOT NULL UNIQUE,
+    email VARCHAR(150) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    points INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- =========================
+-- POSTS
+-- =========================
 CREATE TABLE posts (
- id INT AUTO_INCREMENT PRIMARY KEY,
- title VARCHAR(255),
- content TEXT,
- user_id INT
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    category VARCHAR(100) DEFAULT 'General',
+    user_id INT NOT NULL,
+    image VARCHAR(255) DEFAULT NULL,
+    rating INT DEFAULT 0,
+    likes INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
-CREATE TABLE tags (
- id INT AUTO_INCREMENT PRIMARY KEY,
- name VARCHAR(50)
+-- =========================
+-- COMMENTS
+-- =========================
+CREATE TABLE comments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    post_id INT NOT NULL,
+    user_id INT NOT NULL,
+    comment TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
-
-CREATE TABLE post_tags (
- post_id INT,
- tag_id INT
-);
-
-ALTER TABLE posts 
-ADD COLUMN image VARCHAR(255),
-ADD COLUMN rating INT DEFAULT 0,
-ADD COLUMN likes INT DEFAULT 0;
-
-USE sprint3;
-
--- =========================
--- USERS (keep or replace)
--- =========================
-DELETE FROM users;
-
-INSERT INTO users (id, username, email, password) VALUES
-(1, 'player1', 'player1@email.com', '$2b$10$KbQi4vQ8zQ8vFQnKz3U2fO6vX6YyS2Zz2ZK9Q7k9Q7YwW1F5YwZyG'),
-(2, 'gamerX', 'gamer@email.com', '$2b$10$KbQi4vQ8zQ8vFQnKz3U2fO6vX6YyS2Zz2ZK9Q7k9Q7YwW1F5YwZyG'),
-(3, 'proPlayer', 'pro@email.com', '$2b$10$KbQi4vQ8zQ8vFQnKz3U2fO6vX6YyS2Zz2ZK9Q7k9Q7YwW1F5YwZyG');
-
--- =========================
--- POSTS (WITH IMAGES + RATING + LIKES)
--- =========================
-DELETE FROM posts;
-
-INSERT INTO posts (id, title, content, user_id, image, rating, likes) VALUES
-(1, 'Best FPS Games 2026', 'Call of Duty and Apex Legends dominate FPS gaming.', 1, 'fps.jpg', 5, 10),
-(2, 'Top RPG Games', 'Elden Ring and Witcher 3 are top RPG experiences.', 2, 'rpg.jpg', 4, 7),
-(3, 'Gaming Setup Tips', 'Upgrade your GPU and use a mechanical keyboard.', 1, 'setup.jpg', 3, 5),
-(4, 'Mobile Gaming Trends', 'Mobile esports are rapidly growing worldwide.', 3, 'mobile.jpg', 4, 8),
-(5, 'Best Indie Games', 'Hades and Hollow Knight are amazing indie titles.', 2, 'indie.jpg', 5, 12);
 
 -- =========================
 -- TAGS
 -- =========================
-DELETE FROM tags;
-
-INSERT INTO tags (id, name) VALUES
-(1, 'FPS'),
-(2, 'RPG'),
-(3, 'Tips'),
-(4, 'Mobile'),
-(5, 'Indie');
+CREATE TABLE tags (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE
+);
 
 -- =========================
--- POST TAGS (LINK)
+-- POST_TAGS
 -- =========================
-DELETE FROM post_tags;
+CREATE TABLE post_tags (
+    post_id INT NOT NULL,
+    tag_id INT NOT NULL,
+    PRIMARY KEY (post_id, tag_id),
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+    FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+);
 
+-- =========================
+-- SAMPLE USERS
+-- =========================
+INSERT INTO users (username, email, password, points) VALUES
+('alice', 'alice@example.com', 'password123', 120),
+('bob', 'bob@example.com', 'password123', 90),
+('charlie', 'charlie@example.com', 'password123', 75);
+
+-- =========================
+-- SAMPLE POSTS
+-- =========================
+INSERT INTO posts (title, content, category, user_id, image, rating, likes) VALUES
+('Best RPG Games in 2025', 'Here are some amazing RPG games you should try this year.', 'RPG', 1, NULL, 5, 12),
+('Top FPS Tips for Beginners', 'Practice aim, learn maps, and communicate with your team.', 'FPS', 2, NULL, 4, 8),
+('Gaming Tips for New Players', 'A few useful tips for players who are just starting out.', 'Tips', 3, NULL, 4, 7),
+('Best Mobile Games Right Now', 'These mobile games are fun and easy to get into.', 'Mobile', 1, NULL, 4, 6),
+('Indie Games You Should Not Miss', 'A list of creative indie titles worth checking out.', 'Indie', 2, NULL, 5, 10);
+
+-- =========================
+-- SAMPLE COMMENTS
+-- =========================
+INSERT INTO comments (post_id, user_id, comment) VALUES
+(1, 2, 'Great list, I love RPG games.'),
+(1, 3, 'I will definitely try some of these.'),
+(2, 1, 'These FPS tips are really helpful.'),
+(3, 2, 'Good advice for beginners.'),
+(4, 3, 'Mobile gaming is getting better every year.'),
+(5, 1, 'Indie games deserve more attention.');
+
+-- =========================
+-- SAMPLE TAGS
+-- =========================
+INSERT INTO tags (name) VALUES
+('RPG'),
+('FPS'),
+('Tips'),
+('Mobile'),
+('Indie');
+
+-- =========================
+-- SAMPLE POST_TAGS
+-- =========================
 INSERT INTO post_tags (post_id, tag_id) VALUES
-(1, 1), (1, 3),
-(2, 2), (2, 3),
+(1, 1),
+(2, 2),
+(2, 3),
 (3, 3),
 (4, 4),
-(5, 5), (5, 2);
-
--- =========================
--- COMMENTS TABLE (CREATE IF NOT EXISTS)
--- =========================
-CREATE TABLE IF NOT EXISTS comments (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    content TEXT,
-    post_id INT,
-    username VARCHAR(50),
-    FOREIGN KEY (post_id) REFERENCES posts(id)
-);
-
--- =========================
--- COMMENTS DATA
--- =========================
-DELETE FROM comments;
-
-INSERT INTO comments (content, post_id, username) VALUES
-('🔥 This FPS list is amazing!', 1, 'player1'),
-('I love RPG games so much!', 2, 'gamerX'),
-('These setup tips helped me a lot!', 3, 'proPlayer'),
-('Mobile gaming is the future!', 4, 'player1'),
-('Indie games are underrated!', 5, 'gamerX');
-
--- Add category column to posts
-ALTER TABLE posts ADD COLUMN IF NOT EXISTS category VARCHAR(50);
-
--- Update existing posts with categories
-UPDATE posts SET category = 'FPS' WHERE id = 1;
-UPDATE posts SET category = 'RPG' WHERE id = 2;
-UPDATE posts SET category = 'Tips' WHERE id = 3;
-UPDATE posts SET category = 'Mobile' WHERE id = 4;
-UPDATE posts SET category = 'Indie' WHERE id = 5;
-
--- Create post_ratings table
-CREATE TABLE IF NOT EXISTS post_ratings (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    post_id INT,
-    user_id INT,
-    rating INT,
-    UNIQUE KEY unique_rating (post_id, user_id)
-);
+(5, 5);

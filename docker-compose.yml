@@ -1,17 +1,21 @@
 version: '3.3'
+
 services:
   web:
     build:
       context: ./
     volumes:
       - .:/src
-    command: supervisor -e  'js,pug,html' index.js
+    command: supervisor -e 'js,pug,html' index.js
     ports:
       - "3000:3000"
     depends_on:
       - db
+    env_file:
+      - ./.env
+
   db:
-    image: mysql
+    image: mysql:8
     restart: always
     env_file:
       - ./.env
@@ -19,6 +23,12 @@ services:
       - "3308:3306"
     volumes:
       - ./db:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASS}
+
   phpmyadmin:
     image: phpmyadmin/phpmyadmin:latest
     restart: always
@@ -26,3 +36,8 @@ services:
       - ./.env
     ports:
       - "8081:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_USER: ${MYSQL_USER}
+      PMA_PASSWORD: ${MYSQL_PASS}
