@@ -4,8 +4,12 @@ block content
   - const safeUsers = typeof users !== 'undefined' && users ? users : []
   - const totalUsers = safeUsers.length
   - const getPostCount = (member) => Number(member.post_count || member.posts_count || member.total_posts || member.posts || 0)
+  - const getLikes = (member) => Number(member.total_likes || member.likes || 0)
+  - const getViews = (member) => Number(member.total_views || member.views || 0)
+  - const getPoints = (member) => Number(member.points || ((getPostCount(member) * 25) + (getLikes(member) * 5)))
   - const totalPosts = safeUsers.reduce((sum, member) => sum + getPostCount(member), 0)
-  - const topUser = safeUsers.length ? safeUsers.slice().sort((a, b) => getPostCount(b) - getPostCount(a))[0] : null
+  - const sortedUsers = safeUsers.slice().sort((a, b) => getPostCount(b) - getPostCount(a))
+  - const topUser = sortedUsers.length ? sortedUsers[0] : null
 
   .users-page
     section.users-hero-panel
@@ -19,9 +23,11 @@ block content
           .users-stat-card
             strong= totalUsers
             span Members
+
           .users-stat-card
             strong= totalPosts
             span Posts
+
           .users-stat-card
             strong= topUser ? topUser.username : 'None'
             span Top Contributor
@@ -31,8 +37,12 @@ block content
         .users-section-head
           .users-title-block
             h2 👥 Users
-            p Browse members and see how many posts they have shared.
-          a.create-post-mini(href="/posts/create") Create Post
+            p Browse members, view public profiles, and explore their posts.
+
+          if user
+            a.create-post-mini(href="/posts/create") Create Post
+          else
+            a.create-post-mini(href="/login") Login to Post
 
         if safeUsers.length === 0
           .users-empty-card
@@ -44,31 +54,56 @@ block content
               - const username = member.username || member.name || 'Unknown'
               - const initial = username.charAt(0).toUpperCase()
               - const postsCount = getPostCount(member)
+              - const likesCount = getLikes(member)
+              - const viewsCount = getViews(member)
+              - const points = getPoints(member)
               - const rankLabel = index === 0 ? 'Top Member' : index < 3 ? 'Active Member' : 'Member'
-              - const viewPostsUrl = member.id ? `/posts?userId=${encodeURIComponent(member.id)}` : `/posts?username=${encodeURIComponent(username)}`
+              - const profileUrl = member.id ? `/users/${encodeURIComponent(member.id)}` : '#'
+              - const viewPostsUrl = member.id ? `/posts?user=${encodeURIComponent(member.id)}` : `/posts?user=${encodeURIComponent(username)}`
+              - const avatar = member.avatar_url && member.avatar_url.trim() ? member.avatar_url : null
 
               article.user-card
                 .user-card-top
-                  .user-avatar= initial
+                  if avatar
+                    img.user-avatar-photo(src=avatar alt=username)
+                  else
+                    .user-avatar= initial
+
                   .user-rank-badge= rankLabel
 
                 .user-card-body
                   h3= username
-                  p Community member
+                  if member.bio
+                    p= member.bio.length > 80 ? member.bio.substring(0, 80) + '...' : member.bio
+                  else
+                    p Community member
 
                 .user-card-stats
                   .user-mini-stat
                     strong= postsCount
                     span Posts
+
                   .user-mini-stat
-                    strong #{Math.max(postsCount * 25, 0)}
+                    strong= points
                     span Points
+
+                .user-mini-details
+                  span 👁 #{viewsCount} views
+                  span 💜 #{likesCount} likes
+
+                if member.favorite_game || member.location
+                  .user-profile-tags
+                    if member.favorite_game
+                      span.user-profile-tag 🎮 #{member.favorite_game}
+                    if member.location
+                      span.user-profile-tag 📍 #{member.location}
 
                 .user-progress
                   .user-progress-bar(style=`width: ${Math.min(postsCount * 18, 100)}%`)
 
                 .user-card-actions
-                  a.user-action-btn(href=viewPostsUrl) View Posts
+                  a.user-action-btn(href=profileUrl) View Profile
+                  a.user-action-btn.secondary(href=viewPostsUrl) View Posts
 
       aside.users-sidebar
         .users-side-card
@@ -77,33 +112,47 @@ block content
             .users-info-row
               span Total Members
               strong= totalUsers
+
             .users-info-row
               span Total Posts
               strong= totalPosts
+
             .users-info-row
               span Average Posts
               strong= totalUsers ? (totalPosts / totalUsers).toFixed(1) : '0.0'
 
         .users-side-card
           h3 Top Contributors
+
           if safeUsers.length === 0
             p.users-muted No contributors yet.
           else
             .top-user-list
-              each member, index in safeUsers.slice().sort((a, b) => getPostCount(b) - getPostCount(a)).slice(0, 5)
+              each member, index in sortedUsers.slice(0, 5)
                 - const username = member.username || member.name || 'Unknown'
                 - const initial = username.charAt(0).toUpperCase()
                 - const postsCount = getPostCount(member)
+                - const profileUrl = member.id ? `/users/${encodeURIComponent(member.id)}` : '#'
+                - const avatar = member.avatar_url && member.avatar_url.trim() ? member.avatar_url : null
 
-                .top-user-row
+                a.top-user-row(href=profileUrl)
                   .top-user-left
-                    .top-user-avatar= initial
+                    if avatar
+                      img.top-user-avatar-photo(src=avatar alt=username)
+                    else
+                      .top-user-avatar= initial
+
                     .top-user-copy
                       strong= username
                       span #{postsCount} posts
+
                   .top-user-rank ##{index + 1}
 
         .users-side-card
           h3 Join the Discussion
           p.users-muted Share guides, reviews, tips, and gaming moments with the community.
-          a.users-primary-link(href="/posts/create") Start Posting
+
+          if user
+            a.users-primary-link(href="/posts/create") Start Posting
+          else
+            a.users-primary-link(href="/login") Login to Start

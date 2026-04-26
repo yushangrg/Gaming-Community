@@ -1,0 +1,157 @@
+extends layout
+
+block content
+  - const viewedUser = typeof profileUser !== 'undefined' && profileUser ? profileUser : (typeof viewedUserData !== 'undefined' && viewedUserData ? viewedUserData : null)
+  - const safePosts = typeof posts !== 'undefined' && posts ? posts : []
+  - const safeStats = typeof stats !== 'undefined' && stats ? stats : {}
+  - const username = viewedUser ? (viewedUser.username || viewedUser.name || 'Unknown User') : 'Unknown User'
+  - const initial = username.charAt(0).toUpperCase()
+  - const avatar = viewedUser && viewedUser.avatar ? viewedUser.avatar : (viewedUser && viewedUser.photo ? viewedUser.photo : (viewedUser && viewedUser.profile_photo ? viewedUser.profile_photo : null))
+  - const bio = viewedUser && viewedUser.bio ? viewedUser.bio : 'This member has not added a bio yet.'
+  - const location = viewedUser && viewedUser.location ? viewedUser.location : 'Not added'
+  - const website = viewedUser && viewedUser.website ? viewedUser.website : ''
+  - const favoriteGame = viewedUser && viewedUser.favorite_game ? viewedUser.favorite_game : 'Not added'
+  - const platform = viewedUser && viewedUser.platform ? viewedUser.platform : 'Not added'
+  - const totalPosts = Number(safeStats.total_posts || viewedUser && viewedUser.post_count || safePosts.length || 0)
+  - const totalLikes = Number(safeStats.total_likes || viewedUser && viewedUser.total_likes || 0)
+  - const totalComments = Number(safeStats.total_comments || viewedUser && viewedUser.total_comments || 0)
+  - const totalViews = Number(safeStats.total_views || viewedUser && viewedUser.total_views || 0)
+
+  .profile-page
+    if !viewedUser
+      section.profile-login-panel
+        .profile-login-glow
+        .profile-login-card
+          .profile-login-icon ⚠️
+          h1 User Not Found
+          p The profile you are looking for does not exist or may have been removed.
+          .profile-login-actions
+            a.profile-action-btn(href="/users") Back to Users
+            a.profile-secondary-btn(href="/posts") Browse Posts
+
+    else
+      section.profile-hero-panel
+        .profile-hero-glow
+        .profile-hero-content
+          if avatar
+            img.profile-avatar-image(src=avatar alt=username)
+          else
+            .profile-avatar-large= initial
+
+          span.profile-eyebrow Community Profile
+          h1= username
+          p= bio
+
+          .profile-login-actions
+            a.profile-action-btn(href=`/posts?userId=${viewedUser.id}`) View Posts
+            a.profile-secondary-btn(href="/users") Back to Users
+
+      .profile-layout
+        main.profile-main
+          .profile-card
+            .profile-card-head
+              div
+                h2 About #{username}
+                p.profile-muted Public member information and gaming activity.
+
+            .profile-info-grid
+              .profile-info-box
+                span Username
+                strong= username
+
+              .profile-info-box
+                span Location
+                strong= location
+
+              .profile-info-box
+                span Favorite Game
+                strong= favoriteGame
+
+              .profile-info-box
+                span Platform
+                strong= platform
+
+              if website
+                .profile-info-box
+                  span Website
+                  a(href=website target="_blank" rel="noopener")= website
+
+              .profile-info-box
+                span Member ID
+                strong ##{viewedUser.id}
+
+          .profile-card
+            .profile-card-head
+              div
+                h2 Posts by #{username}
+                p.profile-muted Latest posts shared by this community member.
+
+              a.profile-side-btn(href=`/posts?userId=${viewedUser.id}`) View All
+
+            if safePosts.length === 0
+              p.profile-muted This user has not shared any posts yet.
+            else
+              .profile-post-list
+                each post in safePosts
+                  - const postComments = Number(post.comment_count || post.comments_count || post.total_comments || 0)
+                  - const postViews = Number(post.views || 0)
+                  - const postLikes = Number(post.likes || 0)
+
+                  a.profile-post-item(href=`/posts/${post.id}`)
+                    .profile-post-content
+                      strong= post.title
+                      span #{post.category || 'Gaming'} · #{postLikes} likes · #{postComments} comments · #{postViews} views
+                    .profile-post-arrow →
+
+        aside.profile-sidebar
+          .profile-card
+            if avatar
+              img.profile-sidebar-avatar(src=avatar alt=username)
+            else
+              .profile-sidebar-avatar-fallback= initial
+
+            h3= username
+            p.profile-muted= bio
+
+            .profile-badge Public Profile
+
+          .profile-card
+            h3 Community Stats
+
+            .profile-stat-list
+              .profile-stat-row
+                span Posts
+                strong= totalPosts
+
+              .profile-stat-row
+                span Likes Received
+                strong= totalLikes
+
+              .profile-stat-row
+                span Comments
+                strong= totalComments
+
+              .profile-stat-row
+                span Views
+                strong= totalViews
+
+          .profile-card
+            h3 Gaming Details
+
+            .profile-stat-list
+              .profile-stat-row
+                span Favorite Game
+                strong= favoriteGame
+
+              .profile-stat-row
+                span Platform
+                strong= platform
+
+              .profile-stat-row
+                span Location
+                strong= location
+
+          .profile-card
+            h3 Explore More
+            p.profile-muted Find more creators, guides, reviews, and gaming discussions.
+            a.profile-side-btn(href="/users") Browse Members

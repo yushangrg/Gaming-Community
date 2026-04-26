@@ -5,6 +5,7 @@
    - Posts listing page
    - Single post detail page
    - Users page
+   - Public user profiles
    - Profile page with edit form
    - Auth pages
    - Legal pages: About, Privacy, Terms, Support
@@ -1613,6 +1614,26 @@ button:hover,
   font-size: 1.3rem;
 }
 
+.user-avatar-photo,
+.top-user-avatar-photo {
+  display: block;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 2px solid rgba(168, 85, 247, 0.5);
+  box-shadow: 0 10px 25px rgba(124, 58, 237, 0.32);
+  background: var(--bg-deep);
+}
+
+.user-avatar-photo {
+  width: 58px;
+  height: 58px;
+}
+
+.top-user-avatar-photo {
+  width: 40px;
+  height: 40px;
+}
+
 .user-rank-badge {
   padding: 7px 11px;
   border-radius: 999px;
@@ -1657,6 +1678,35 @@ button:hover,
   font-size: 0.82rem;
 }
 
+.user-mini-details {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.user-profile-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.user-profile-tag {
+  display: inline-flex;
+  width: fit-content;
+  padding: 7px 10px;
+  border-radius: 999px;
+  color: #e9d5ff;
+  background: rgba(124, 58, 237, 0.16);
+  border: 1px solid rgba(168, 85, 247, 0.26);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
 .user-progress {
   height: 8px;
   border-radius: 999px;
@@ -1674,6 +1724,15 @@ button:hover,
 .user-card-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.user-action-btn.secondary {
+  color: #fff;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(168, 85, 247, 0.38);
+  box-shadow: none;
 }
 
 .users-side-card {
@@ -1696,6 +1755,14 @@ button:hover,
   align-items: center;
   justify-content: space-between;
   gap: 14px;
+  color: inherit;
+  border-radius: 14px;
+  transition: 0.2s ease;
+}
+
+.top-user-row:hover {
+  color: inherit;
+  transform: translateY(-2px);
 }
 
 .top-user-left {
@@ -1728,7 +1795,7 @@ button:hover,
 
 
 /* =========================================================
-   12. PROFILE PAGE
+   12. PROFILE / PUBLIC USER PROFILE PAGE
 ========================================================= */
 .profile-page {
   width: var(--container);
@@ -1853,6 +1920,7 @@ button:hover,
   object-fit: cover;
   border: 3px solid rgba(168, 85, 247, 0.55);
   box-shadow: 0 18px 42px rgba(124, 58, 237, 0.38);
+  background: var(--bg-deep);
 }
 
 .profile-layout {
@@ -2085,6 +2153,7 @@ button:hover,
   object-fit: cover;
   border: 3px solid rgba(168, 85, 247, 0.5);
   box-shadow: 0 14px 32px rgba(124, 58, 237, 0.28);
+  background: var(--bg-deep);
 }
 
 .profile-sidebar-avatar-fallback {
@@ -2534,5 +2603,9 @@ body > h3 + p + a {
 
   .main-content img {
     max-height: 280px;
+  }
+
+  .user-card-actions {
+    justify-content: flex-start;
   }
 }
