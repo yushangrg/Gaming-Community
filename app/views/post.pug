@@ -6,8 +6,7 @@ block content
 
     .container
       .main-content
-        img(src=`https://placehold.co/800x400/1a1a2e/ffffff?text=${post.category || 'Gaming'}` style="width:100%; height:400px; object-fit:cover;")
-
+        img(src=post.image || "https://placehold.co/800x400/1a1a2e/ffffff?text=Gaming" style="width:100%; height:400px; object-fit:contain; background:#111;")
         h3= post.title
         p By #{post.username}
 
