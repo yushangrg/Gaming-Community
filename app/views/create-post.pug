@@ -8,7 +8,7 @@ block content
       div(style="margin-bottom:16px;")
         label Title
         br
-        input(type="text" name="title" placeholder="Post title..." style="width:100%; padding:8px; margin-top:4px;")
+        input(type="text" name="title" placeholder="Post title..." required style="width:100%; padding:8px; margin-top:4px;")
 
       div(style="margin-bottom:16px;")
         label Category
@@ -22,8 +22,13 @@ block content
           option(value="Other") Other
 
       div(style="margin-bottom:16px;")
+        label Image Path / URL
+        br
+        input(type="text" name="image" placeholder="/images/fortnite.jpg or https://..." style="width:100%; padding:8px; margin-top:4px;")
+
+      div(style="margin-bottom:16px;")
         label Content
         br
-        textarea(name="content" rows="6" placeholder="Write your post..." style="width:100%; padding:8px; margin-top:4px;")
+        textarea(name="content" rows="6" placeholder="Write your post..." required style="width:100%; padding:8px; margin-top:4px;")
 
       button(type="submit" style="padding:10px 24px;") 🚀 Publish Post

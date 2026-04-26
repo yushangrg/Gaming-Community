@@ -4,7 +4,7 @@ const db = require('../services/db');
 const router = express.Router();
 
 // ======================
-// LISTING PAGE (category + tag + search)
+// LISTING PAGE
 // ======================
 router.get('/', async (req, res) => {
     try {
@@ -73,12 +73,12 @@ router.post('/create', async (req, res) => {
             return res.redirect('/login');
         }
 
-        const { title, content, category } = req.body;
+        const { title, content, category, image } = req.body;
         const user_id = req.session.user.id;
 
         await db.query(
-            'INSERT INTO posts (title, content, category, user_id, likes, rating) VALUES (?, ?, ?, ?, 0, 0)',
-            [title, content, category, user_id]
+            'INSERT INTO posts (title, content, category, image, user_id, likes, rating) VALUES (?, ?, ?, ?, ?, 0, 0)',
+            [title, content, category, image || null, user_id]
         );
 
         res.redirect('/posts');
@@ -146,6 +146,62 @@ router.get('/:id/like', async (req, res) => {
         );
 
         res.redirect('/posts/' + req.params.id);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Server Error");
+    }
+});
+
+// ======================
+// RATE A POST
+// ======================
+router.post('/:id/rate', async (req, res) => {
+    try {
+        if (!req.session.user) {
+            return res.redirect('/login');
+        }
+
+        const rating = Number(req.body.rating);
+
+        if (!rating || rating < 1 || rating > 5) {
+            return res.redirect('/posts/' + req.params.id);
+        }
+
+        await db.query(
+            'UPDATE posts SET rating = ? WHERE id = ?',
+            [rating, req.params.id]
+        );
+
+        res.redirect('/posts/' + req.params.id);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Server Error");
+    }
+});
+
+// ======================
+// COMMENT ON A POST
+// ======================
+router.post('/:id/comment', async (req, res) => {
+    try {
+        if (!req.session.user) {
+            return res.redirect('/login');
+        }
+
+        const content = req.body.content;
+        const user_id = req.session.user.id;
+        const post_id = req.params.id;
+
+        if (!content || !content.trim()) {
+            return res.redirect('/posts/' + post_id);
+        }
+
+        await db.query(
+            'INSERT INTO comments (post_id, user_id, comment) VALUES (?, ?, ?)',
+            [post_id, user_id, content]
+        );
+
+        res.redirect('/posts/' + post_id);
     } catch (err) {
         console.error(err);
         res.status(500).send("Server Error");
