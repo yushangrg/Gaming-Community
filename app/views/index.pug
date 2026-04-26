@@ -1,41 +1,115 @@
 extends layout
 
 block content
-  .container
-    .sidebar
-      h3 Categories
-      ul
-        li: a(href="/posts") All
-        li: a(href="/posts?category=FPS") FPS
-        li: a(href="/posts?category=RPG") RPG
-        li: a(href="/posts?category=Tips") Tips
-        li: a(href="/posts?category=Mobile") Mobile
-        li: a(href="/posts?category=Indie") Indie
-      h3 Tags
-      ul
-        li: a(href="/posts?tag=FPS") FPS
-        li: a(href="/posts?tag=RPG") RPG
-        li: a(href="/posts?tag=Tips") Tips
-        li: a(href="/posts?tag=Mobile") Mobile
-        li: a(href="/posts?tag=Indie") Indie
-    .main
-      h2 🎮 Game Posts
-      form(action="/posts" method="GET" style="margin-bottom:16px;")
-        input(type="text" name="search" placeholder="Search posts..." value=search style="padding:8px; width:70%; margin-right:8px;")
-        button(type="submit" style="padding:8px 16px;") 🔍 Search
-      if user
-        a(href="/posts/create")
-          button(style="margin-bottom:16px; padding:10px 20px;") ✍️ Create New Post
-      if posts.length === 0
-        p No posts found.
-      else
-        each post in posts
-          .card.post
-            a(href=`/posts/${post.id}`)
-              img(src=post.image || "https://placehold.co/400x200/1a1a2e/ffffff?text=Gaming")
-            .post-info
-              a(href=`/posts/${post.id}`)
-                h3= post.title
-              p By #{post.username || "Unknown"}
-              p ⭐ Rating: #{post.rating} / 5
-              p 👍 Likes: #{post.likes}
+  - const safePosts = typeof posts !== 'undefined' && posts ? posts : []
+  - const activeCategory = typeof category !== 'undefined' ? category : ''
+  - const activeTag = typeof tag !== 'undefined' ? tag : ''
+  - const activeSearch = typeof search !== 'undefined' ? search : ''
+  - const categories = ['Action', 'Adventure', 'RPG', 'Shooter', 'Strategy', 'Racing', 'Sports', 'Indie', 'FPS', 'Tips', 'Mobile']
+  - const tagsList = ['RPG', 'Guide', 'Beginner', 'FPS', 'Tips', 'Mobile', 'Indie']
+
+  .posts-dashboard-page
+    section.posts-hero-panel
+      .hero-art-left
+      .hero-art-right
+      .posts-hero-content
+        h1 Share. Discuss. 
+          span Dominate.
+        p Join the ultimate gaming community. Share your experiences, tips, reviews, and epic gaming moments.
+        form(action="/posts" method="GET" class="hero-search-form")
+          input(type="text" name="search" placeholder="Search games, posts, users..." value=activeSearch)
+          button(type="submit") Search
+
+    .posts-filter-row
+      a.filter-pill(class=!activeCategory && !activeTag ? 'active' : '' href="/posts") All Posts
+      each cat in categories.slice(0, 6)
+        a.filter-pill(class=activeCategory === cat ? 'active' : '' href=`/posts?category=${encodeURIComponent(cat)}`)= cat
+
+      .sort-pill Latest ▾
+
+    .posts-dashboard-layout
+      aside.posts-left-sidebar
+        .dashboard-side-card
+          h3 Categories
+          .category-list
+            a.category-row(class=!activeCategory ? 'active' : '' href="/posts")
+              span.category-name All
+              span.category-count= safePosts.length
+            each cat in categories
+              a.category-row(class=activeCategory === cat ? 'active' : '' href=`/posts?category=${encodeURIComponent(cat)}`)
+                span.category-name= cat
+                span.category-count posts
+
+        .dashboard-side-card
+          h3 Tags
+          .category-list
+            each tagName in tagsList
+              a.category-row(class=activeTag === tagName ? 'active' : '' href=`/posts?tag=${encodeURIComponent(tagName)}`)
+                span.category-name # #{tagName}
+                span.category-count tag
+
+      main.posts-feed
+        .feed-header
+          h2 🎮 Game Posts
+          form(action="/posts" method="GET" class="feed-search-form")
+            input(type="text" name="search" placeholder="Search posts..." value=activeSearch)
+            button(type="submit") Search
+
+        if safePosts.length === 0
+          .empty-feed-card
+            h3 No posts found
+            p Try another search, category, or tag.
+            a(href="/posts") View all posts
+        else
+          .professional-post-list
+            each post in safePosts
+              - const postDate = post.created_at ? new Date(post.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recently'
+              - const excerpt = post.content ? (post.content.length > 140 ? post.content.slice(0, 140) + '...' : post.content) : 'No description yet.'
+              - const ratingValue = post.rating ? parseFloat(post.rating).toFixed(1) : '0.0'
+
+              article.professional-post-card
+                a.post-thumb-link(href=`/posts/${post.id}`)
+                  img(src=post.image || "https://placehold.co/640x420/0f172a/f8fafc?text=Gaming" alt=post.title)
+
+                .professional-post-content
+                  .card-top-line
+                    span.category-badge= post.category || 'Gaming'
+                    span.post-time= postDate
+
+                  h3
+                    a(href=`/posts/${post.id}`)= post.title
+
+                  p.post-excerpt= excerpt
+
+                  .post-meta-row
+                    .author-mini
+                      .author-mini-avatar= post.username ? post.username.charAt(0).toUpperCase() : 'U'
+                      span= post.username || 'Unknown'
+
+                    .post-small-stats
+                      span 👁 #{post.views || 0}
+                      span 💬 #{post.comment_count || 0}
+                      span 💜 #{post.likes || 0}
+                      span ⭐ #{ratingValue}
+
+                  .post-card-actions
+                    a.read-more-btn(href=`/posts/${post.id}`) Read Post
+
+      aside.posts-right-sidebar
+        .dashboard-side-card
+          h3 Quick Stats
+          .quick-stat-list
+            .quick-stat-row
+              span Total Posts
+              strong= safePosts.length
+            .quick-stat-row
+              span Active Category
+              strong= activeCategory || 'All'
+            .quick-stat-row
+              span Active Tag
+              strong= activeTag || 'None'
+
+        .dashboard-side-card
+          h3 Community
+          p.side-muted Discover posts, reviews, tips, builds, guides, and gaming discussions from the community.
+          a.side-action-btn(href="/posts/create") Create Post

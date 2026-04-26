@@ -1,14 +1,108 @@
 extends layout
 
 block content
-  .main
-    h2 👥 Users
+  - const safeUsers = typeof users !== 'undefined' && users ? users : []
+  - const totalUsers = safeUsers.length
+  - const getPostCount = (member) => Number(member.post_count || member.posts_count || member.total_posts || member.posts || 0)
+  - const totalPosts = safeUsers.reduce((sum, member) => sum + getPostCount(member), 0)
+  - const topUser = safeUsers.length ? safeUsers.slice().sort((a, b) => getPostCount(b) - getPostCount(a))[0] : null
 
-    if users.length === 0
-      p No users found.
-    else
-      each user in users
-        .user-card
-          a(href=`/users/${user.id}`)
-            h3= user.username
-          p 📄 Posts: #{user.post_count}
+  .users-page
+    section.users-hero-panel
+      .users-hero-glow
+      .users-hero-content
+        span.users-eyebrow Gaming Community
+        h1 Community Members
+        p Discover active players, creators, reviewers, and contributors in the gaming community.
+
+        .users-hero-stats
+          .users-stat-card
+            strong= totalUsers
+            span Members
+          .users-stat-card
+            strong= totalPosts
+            span Posts
+          .users-stat-card
+            strong= topUser ? topUser.username : 'None'
+            span Top Contributor
+
+    .users-layout
+      main.users-main
+        .users-section-head
+          .users-title-block
+            h2 👥 Users
+            p Browse members and see how many posts they have shared.
+          a.create-post-mini(href="/posts/create") Create Post
+
+        if safeUsers.length === 0
+          .users-empty-card
+            h3 No users found
+            p There are no community members to show yet.
+        else
+          .users-grid
+            each member, index in safeUsers
+              - const username = member.username || member.name || 'Unknown'
+              - const initial = username.charAt(0).toUpperCase()
+              - const postsCount = getPostCount(member)
+              - const rankLabel = index === 0 ? 'Top Member' : index < 3 ? 'Active Member' : 'Member'
+
+              article.user-card
+                .user-card-top
+                  .user-avatar= initial
+                  .user-rank-badge= rankLabel
+
+                .user-card-body
+                  h3= username
+                  p Community member
+
+                .user-card-stats
+                  .user-mini-stat
+                    strong= postsCount
+                    span Posts
+                  .user-mini-stat
+                    strong #{Math.max(postsCount * 25, 0)}
+                    span Points
+
+                .user-progress
+                  .user-progress-bar(style=`width: ${Math.min(postsCount * 18, 100)}%`)
+
+                .user-card-actions
+                  a.user-action-btn(href=`/posts?search=${encodeURIComponent(username)}`) View Posts
+
+      aside.users-sidebar
+        .users-side-card
+          h3 Community Stats
+          .users-info-list
+            .users-info-row
+              span Total Members
+              strong= totalUsers
+            .users-info-row
+              span Total Posts
+              strong= totalPosts
+            .users-info-row
+              span Average Posts
+              strong= totalUsers ? (totalPosts / totalUsers).toFixed(1) : '0.0'
+
+        .users-side-card
+          h3 Top Contributors
+          if safeUsers.length === 0
+            p.users-muted No contributors yet.
+          else
+            .top-user-list
+              each member, index in safeUsers.slice().sort((a, b) => getPostCount(b) - getPostCount(a)).slice(0, 5)
+                - const username = member.username || member.name || 'Unknown'
+                - const initial = username.charAt(0).toUpperCase()
+                - const postsCount = getPostCount(member)
+
+                .top-user-row
+                  .top-user-left
+                    .top-user-avatar= initial
+                    .top-user-copy
+                      strong= username
+                      span #{postsCount} posts
+                  .top-user-rank ##{index + 1}
+
+        .users-side-card
+          h3 Join the Discussion
+          p.users-muted Share guides, reviews, tips, and gaming moments with the community.
+          a.users-primary-link(href="/posts/create") Start Posting
