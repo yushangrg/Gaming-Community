@@ -1,14 +1,6 @@
 /* =========================================================
    GAMING COMMUNITY - PROFESSIONAL DARK THEME
-   Pages supported:
-   - Navbar / Footer
-   - Posts listing page
-   - Single post detail page
-   - Users page
-   - Profile page
-   - Auth pages
 ========================================================= */
-
 
 /* =========================================================
    01. RESET / THEME VARIABLES
@@ -27,7 +19,6 @@
   --card: rgba(12, 23, 42, 0.95);
   --card-2: rgba(6, 14, 28, 0.98);
   --card-hover: rgba(17, 32, 56, 0.98);
-
   --input: rgba(7, 16, 33, 0.92);
 
   --text: #f8fafc;
@@ -79,7 +70,6 @@ body {
   color: #fff;
 }
 
-
 /* =========================================================
    02. BASE ELEMENTS
 ========================================================= */
@@ -112,7 +102,6 @@ h4 {
 p {
   color: var(--text-soft);
 }
-
 
 /* =========================================================
    03. NAVBAR
@@ -177,7 +166,6 @@ p {
   box-shadow: var(--glow);
   padding: 11px 18px;
 }
-
 
 /* =========================================================
    04. SHARED LAYOUT / CARDS
@@ -249,7 +237,6 @@ p {
   background: rgba(139, 92, 246, 0.14);
   border-color: rgba(168, 85, 247, 0.3);
 }
-
 
 /* =========================================================
    05. FORMS / BUTTONS
@@ -368,9 +355,8 @@ button:hover,
   border-color: rgba(239, 68, 68, 0.32);
 }
 
-
 /* =========================================================
-   06. FOOTER
+   06. FOOTER - FIXED GAMING BLOCK
 ========================================================= */
 .footer {
   margin-top: 60px;
@@ -385,6 +371,7 @@ button:hover,
   display: grid;
   grid-template-columns: 1.5fr 1fr 1fr;
   gap: 24px;
+  align-items: start;
 }
 
 .footer-left p,
@@ -412,16 +399,36 @@ button:hover,
 
 .footer-right {
   display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
   flex-wrap: wrap;
-  gap: 12px;
 }
 
+.footer-right span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.footer-right .social,
 .social {
-  padding: 8px 10px;
-  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto !important;
+  height: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  max-height: none !important;
+  padding: 8px 12px;
+  border-radius: 999px;
   background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  line-height: 1;
 }
-
 
 /* =========================================================
    07. HOME / GENERAL POST CARDS
@@ -574,7 +581,6 @@ button:hover,
   background: rgba(124, 58, 237, 0.32);
   color: #fff;
 }
-
 
 /* =========================================================
    08. POSTS LISTING PAGE
@@ -984,10 +990,8 @@ button:hover,
   text-align: center;
 }
 
-
 /* =========================================================
    09. SINGLE POST DETAIL PAGE
-   Supports both new .post-* and old .premium-* class names
 ========================================================= */
 .post-detail-page,
 .post-premium-page {
@@ -1249,7 +1253,6 @@ button:hover,
   margin-top: 0;
 }
 
-
 /* =========================================================
    10. COMMENTS
 ========================================================= */
@@ -1427,7 +1430,6 @@ button:hover,
   gap: 12px;
   margin-top: 12px;
 }
-
 
 /* =========================================================
    11. USERS PAGE
@@ -1700,7 +1702,6 @@ button:hover,
   font-weight: 950;
 }
 
-
 /* =========================================================
    12. PROFILE PAGE
 ========================================================= */
@@ -1945,7 +1946,6 @@ button:hover,
   margin-bottom: 16px;
 }
 
-
 /* =========================================================
    13. AUTH / PROFILE FORMS
 ========================================================= */
@@ -1974,10 +1974,8 @@ button:hover,
   gap: 14px;
 }
 
-
 /* =========================================================
    14. FALLBACK FOR OLD SIMPLE PROFILE MARKUP
-   This helps if profile.pug has not been replaced yet.
 ========================================================= */
 body > h2,
 body > h3 {
@@ -1995,7 +1993,6 @@ body > h2 + p + a,
 body > h3 + p + a {
   margin-left: 2%;
 }
-
 
 /* =========================================================
    15. RESPONSIVE
@@ -2081,6 +2078,10 @@ body > h3 + p + a {
 
   .footer-container {
     grid-template-columns: 1fr;
+  }
+
+  .footer-right {
+    justify-content: flex-start;
   }
 }
 

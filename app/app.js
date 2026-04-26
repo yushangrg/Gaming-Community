@@ -38,26 +38,58 @@ app.use('/users', userRoutes);
 app.use('/posts', postRoutes);
 app.use('/about', aboutRoutes);
 
+// STATIC FOOTER PAGES
+app.get('/privacy-policy', (req, res) => {
+    res.render('privacy-policy');
+});
+
+app.get('/terms-of-service', (req, res) => {
+    res.render('terms-of-service');
+});
+
+app.get('/support', (req, res) => {
+    res.render('support');
+});
+
 // PROFILE (AUTH-BASED)
 app.get('/profile', async (req, res) => {
     try {
         if (!req.session.user) {
-            return res.render('profile', { user: null, posts: [] });
+            return res.render('profile', {
+                user: null,
+                posts: []
+            });
         }
 
         const userId = req.session.user.id;
 
         const [users] = await db.query(
-            'SELECT * FROM users WHERE id=?',
+            'SELECT * FROM users WHERE id = ?',
             [userId]
         );
 
         if (!users.length) {
-            return res.render('profile', { user: null, posts: [] });
+            req.session.destroy(() => {});
+            return res.render('profile', {
+                user: null,
+                posts: []
+            });
         }
 
         const [posts] = await db.query(
-            'SELECT * FROM posts WHERE user_id=?',
+            `
+            SELECT 
+                posts.*,
+                COALESCE(comment_counts.total_comments, 0) AS comment_count
+            FROM posts
+            LEFT JOIN (
+                SELECT post_id, COUNT(*) AS total_comments
+                FROM comments
+                GROUP BY post_id
+            ) AS comment_counts ON comment_counts.post_id = posts.id
+            WHERE posts.user_id = ?
+            ORDER BY posts.id DESC
+            `,
             [userId]
         );
 

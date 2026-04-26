@@ -33,15 +33,27 @@ router.get('/', async (req, res) => {
         const category = req.query.category || '';
         const tag = req.query.tag || '';
         const search = req.query.search || '';
-        const userId = req.query.userId || '';
-        const username = req.query.username || '';
+        const userFilter = req.query.user || '';
 
         let query = `
-            SELECT DISTINCT posts.*, users.username
+            SELECT DISTINCT
+                posts.*,
+                users.username,
+                COALESCE(comment_counts.total_comments, 0) AS comment_count,
+                COALESCE(comment_counts.total_comments, 0) AS comments_count,
+                COALESCE(comment_counts.total_comments, 0) AS total_comments
             FROM posts
             JOIN users ON posts.user_id = users.id
+
+            LEFT JOIN (
+                SELECT post_id, COUNT(*) AS total_comments
+                FROM comments
+                GROUP BY post_id
+            ) AS comment_counts ON comment_counts.post_id = posts.id
+
             LEFT JOIN post_tags ON posts.id = post_tags.post_id
             LEFT JOIN tags ON post_tags.tag_id = tags.id
+
             WHERE 1=1
         `;
 
@@ -58,18 +70,18 @@ router.get('/', async (req, res) => {
         }
 
         if (search) {
-            query += ' AND (posts.title LIKE ? OR posts.content LIKE ? OR users.username LIKE ?)';
-            params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+            query += ' AND (posts.title LIKE ? OR posts.content LIKE ?)';
+            params.push(`%${search}%`, `%${search}%`);
         }
 
-        if (userId) {
-            query += ' AND posts.user_id = ?';
-            params.push(userId);
-        }
-
-        if (!userId && username) {
-            query += ' AND users.username = ?';
-            params.push(username);
+        if (userFilter) {
+            if (!isNaN(userFilter)) {
+                query += ' AND posts.user_id = ?';
+                params.push(userFilter);
+            } else {
+                query += ' AND users.username = ?';
+                params.push(userFilter);
+            }
         }
 
         query += ' ORDER BY posts.id DESC';
@@ -81,13 +93,11 @@ router.get('/', async (req, res) => {
             category,
             tag,
             search,
-            userId,
-            username,
-            user: req.session.user || null
+            selectedUser: userFilter
         });
     } catch (err) {
         console.error(err);
-        res.status(500).send("Server Error");
+        res.status(500).send('Server Error');
     }
 });
 
@@ -100,12 +110,10 @@ router.get('/create', async (req, res) => {
             return res.redirect('/login');
         }
 
-        res.render('create-post', {
-            user: req.session.user || null
-        });
+        res.render('create-post');
     } catch (err) {
         console.error(err);
-        res.status(500).send("Server Error");
+        res.status(500).send('Server Error');
     }
 });
 
@@ -121,19 +129,30 @@ router.post('/create', async (req, res) => {
         const { title, content, category, image, video } = req.body;
         const user_id = req.session.user.id;
 
+        if (!title || !content || !category) {
+            return res.redirect('/posts/create');
+        }
+
         await db.query(
             `
             INSERT INTO posts 
             (title, content, category, image, video, user_id, likes, rating, views) 
             VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0)
             `,
-            [title, content, category, image || null, video || null, user_id]
+            [
+                title.trim(),
+                content.trim(),
+                category.trim(),
+                image || null,
+                video || null,
+                user_id
+            ]
         );
 
         res.redirect('/posts');
     } catch (err) {
         console.error(err);
-        res.status(500).send("Server Error");
+        res.status(500).send('Server Error');
     }
 });
 
@@ -144,71 +163,92 @@ router.get('/:id', async (req, res) => {
     try {
         const postId = req.params.id;
 
-        const [existingPosts] = await db.query(`
-            SELECT id
-            FROM posts
-            WHERE id = ?
-        `, [postId]);
+        await db.query(
+            'UPDATE posts SET views = COALESCE(views, 0) + 1 WHERE id = ?',
+            [postId]
+        );
 
-        if (!existingPosts.length) {
-            return res.status(404).send("Post not found");
-        }
-
-        await db.query(`
-            UPDATE posts
-            SET views = COALESCE(views, 0) + 1
-            WHERE id = ?
-        `, [postId]);
-
-        const [posts] = await db.query(`
-            SELECT posts.*, users.username
+        const [posts] = await db.query(
+            `
+            SELECT 
+                posts.*,
+                users.username,
+                COALESCE(comment_counts.total_comments, 0) AS comment_count,
+                COALESCE(comment_counts.total_comments, 0) AS comments_count,
+                COALESCE(comment_counts.total_comments, 0) AS total_comments
             FROM posts
             JOIN users ON posts.user_id = users.id
+
+            LEFT JOIN (
+                SELECT post_id, COUNT(*) AS total_comments
+                FROM comments
+                GROUP BY post_id
+            ) AS comment_counts ON comment_counts.post_id = posts.id
+
             WHERE posts.id = ?
-        `, [postId]);
+            `,
+            [postId]
+        );
+
+        if (!posts.length) {
+            return res.status(404).send('Post not found');
+        }
 
         const post = posts[0];
 
-        const [tags] = await db.query(`
+        const [tags] = await db.query(
+            `
             SELECT tags.name
             FROM tags
             JOIN post_tags ON tags.id = post_tags.tag_id
             WHERE post_tags.post_id = ?
-        `, [postId]);
+            `,
+            [postId]
+        );
 
-        const [rawComments] = await db.query(`
-            SELECT comments.id,
-                   comments.post_id,
-                   comments.user_id,
-                   comments.parent_id,
-                   comments.comment AS content,
-                   comments.created_at,
-                   users.username
+        const [rawComments] = await db.query(
+            `
+            SELECT 
+                comments.id,
+                comments.post_id,
+                comments.user_id,
+                comments.parent_id,
+                comments.comment AS content,
+                comments.created_at,
+                users.username
             FROM comments
             JOIN users ON comments.user_id = users.id
             WHERE comments.post_id = ?
             ORDER BY comments.created_at ASC
-        `, [postId]);
+            `,
+            [postId]
+        );
 
-        const commentIds = rawComments.map(c => c.id);
+        const commentIds = rawComments.map(comment => comment.id);
 
         let reactionRows = [];
         let reportedRows = [];
 
         if (commentIds.length > 0) {
-            [reactionRows] = await db.query(`
+            [reactionRows] = await db.query(
+                `
                 SELECT comment_id, reaction, COUNT(*) AS total
                 FROM comment_reactions
                 WHERE comment_id IN (?)
                 GROUP BY comment_id, reaction
-            `, [commentIds]);
+                `,
+                [commentIds]
+            );
 
             if (req.session.user) {
-                [reportedRows] = await db.query(`
+                [reportedRows] = await db.query(
+                    `
                     SELECT comment_id
                     FROM comment_reports
                     WHERE user_id = ? AND comment_id IN (?)
-                `, [req.session.user.id, commentIds]);
+                    `,
+                    [req.session.user.id, commentIds]
+                );
             }
         }
 
@@ -226,7 +266,7 @@ router.get('/:id', async (req, res) => {
             reactionMap[row.comment_id][row.reaction] = row.total;
         });
 
-        const reportedSet = new Set(reportedRows.map(r => r.comment_id));
+        const reportedSet = new Set(reportedRows.map(row => row.comment_id));
 
         const comments = rawComments.map(comment => ({
             ...comment,
@@ -247,10 +287,9 @@ router.get('/:id', async (req, res) => {
             comments: commentTree,
             user: req.session.user || null
         });
-
     } catch (err) {
         console.error(err);
-        res.status(500).send("Server Error");
+        res.status(500).send('Server Error');
     }
 });
 
@@ -271,7 +310,7 @@ router.get('/:id/like', async (req, res) => {
         res.redirect('/posts/' + req.params.id);
     } catch (err) {
         console.error(err);
-        res.status(500).send("Server Error");
+        res.status(500).send('Server Error');
     }
 });
 
@@ -298,7 +337,7 @@ router.post('/:id/rate', async (req, res) => {
         res.redirect('/posts/' + req.params.id);
     } catch (err) {
         console.error(err);
-        res.status(500).send("Server Error");
+        res.status(500).send('Server Error');
     }
 });
 
@@ -320,14 +359,18 @@ router.post('/:id/comment', async (req, res) => {
         }
 
         await db.query(
-            'INSERT INTO comments (post_id, user_id, comment, parent_id) VALUES (?, ?, ?, NULL)',
+            `
+            INSERT INTO comments 
+            (post_id, user_id, comment, parent_id) 
+            VALUES (?, ?, ?, NULL)
+            `,
             [post_id, user_id, content.trim()]
         );
 
         res.redirect('/posts/' + post_id);
     } catch (err) {
         console.error(err);
-        res.status(500).send("Server Error");
+        res.status(500).send('Server Error');
     }
 });
 
@@ -354,19 +397,23 @@ router.post('/:id/comment/:commentId/reply', async (req, res) => {
             [parent_id]
         );
 
-        if (!parentRows.length || parentRows[0].post_id != post_id) {
+        if (!parentRows.length || Number(parentRows[0].post_id) !== Number(post_id)) {
             return res.status(404).send('Parent comment not found');
         }
 
         await db.query(
-            'INSERT INTO comments (post_id, user_id, comment, parent_id) VALUES (?, ?, ?, ?)',
+            `
+            INSERT INTO comments 
+            (post_id, user_id, comment, parent_id) 
+            VALUES (?, ?, ?, ?)
+            `,
             [post_id, user_id, content.trim(), parent_id]
         );
 
         res.redirect(`/posts/${post_id}#comment-${parent_id}`);
     } catch (err) {
         console.error(err);
-        res.status(500).send("Server Error");
+        res.status(500).send('Server Error');
     }
 });
 
@@ -399,25 +446,40 @@ router.post('/comments/:commentId/react', async (req, res) => {
         const postId = commentRows[0].post_id;
 
         const [existing] = await db.query(
-            'SELECT * FROM comment_reactions WHERE comment_id = ? AND user_id = ?',
+            `
+            SELECT *
+            FROM comment_reactions
+            WHERE comment_id = ? AND user_id = ?
+            `,
             [commentId, userId]
         );
 
         if (existing.length) {
             if (existing[0].reaction === reaction) {
                 await db.query(
-                    'DELETE FROM comment_reactions WHERE comment_id = ? AND user_id = ?',
+                    `
+                    DELETE FROM comment_reactions
+                    WHERE comment_id = ? AND user_id = ?
+                    `,
                     [commentId, userId]
                 );
             } else {
                 await db.query(
-                    'UPDATE comment_reactions SET reaction = ? WHERE comment_id = ? AND user_id = ?',
+                    `
+                    UPDATE comment_reactions
+                    SET reaction = ?
+                    WHERE comment_id = ? AND user_id = ?
+                    `,
                     [reaction, commentId, userId]
                 );
             }
         } else {
             await db.query(
-                'INSERT INTO comment_reactions (comment_id, user_id, reaction) VALUES (?, ?, ?)',
+                `
+                INSERT INTO comment_reactions
+                (comment_id, user_id, reaction)
+                VALUES (?, ?, ?)
+                `,
                 [commentId, userId, reaction]
             );
         }
@@ -425,7 +487,7 @@ router.post('/comments/:commentId/react', async (req, res) => {
         res.redirect(`/posts/${postId}#comment-${commentId}`);
     } catch (err) {
         console.error(err);
-        res.status(500).send("Server Error");
+        res.status(500).send('Server Error');
     }
 });
 
@@ -453,14 +515,18 @@ router.post('/comments/:commentId/report', async (req, res) => {
         const postId = commentRows[0].post_id;
 
         await db.query(
-            'INSERT IGNORE INTO comment_reports (comment_id, user_id, reason) VALUES (?, ?, ?)',
+            `
+            INSERT IGNORE INTO comment_reports
+            (comment_id, user_id, reason)
+            VALUES (?, ?, ?)
+            `,
             [commentId, userId, 'Inappropriate']
         );
 
         res.redirect(`/posts/${postId}#comment-${commentId}`);
     } catch (err) {
         console.error(err);
-        res.status(500).send("Server Error");
+        res.status(500).send('Server Error');
     }
 });
 
@@ -487,7 +553,7 @@ router.post('/comments/:commentId/delete', async (req, res) => {
 
         const comment = commentRows[0];
 
-        if (comment.user_id !== userId) {
+        if (Number(comment.user_id) !== Number(userId)) {
             return res.status(403).send('You can only delete your own comments');
         }
 
@@ -499,7 +565,7 @@ router.post('/comments/:commentId/delete', async (req, res) => {
         res.redirect(`/posts/${comment.post_id}`);
     } catch (err) {
         console.error(err);
-        res.status(500).send("Server Error");
+        res.status(500).send('Server Error');
     }
 });
 
