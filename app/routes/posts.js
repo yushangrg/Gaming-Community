@@ -1,7 +1,40 @@
 const express = require('express');
 const db = require('../services/db');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 const router = express.Router();
+
+// make sure upload folder exists
+const uploadDir = path.join(__dirname, '../../static/uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// multer config
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueName = Date.now() + '-' + file.originalname.replace(/\s+/g, '-');
+        cb(null, uniqueName);
+    }
+});
+
+const fileFilter = (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+        cb(null, true);
+    } else {
+        cb(new Error('Only image files are allowed'), false);
+    }
+};
+
+const upload = multer({
+    storage,
+    fileFilter
+});
 
 // ======================
 // LISTING PAGE
@@ -57,6 +90,7 @@ router.get('/create', async (req, res) => {
         if (!req.session.user) {
             return res.redirect('/login');
         }
+
         res.render('create-post');
     } catch (err) {
         console.error(err);
@@ -67,24 +101,139 @@ router.get('/create', async (req, res) => {
 // ======================
 // CREATE POST SUBMIT
 // ======================
-router.post('/create', async (req, res) => {
+router.post('/create', upload.single('image'), async (req, res) => {
     try {
         if (!req.session.user) {
             return res.redirect('/login');
         }
 
-        const { title, content, category, image } = req.body;
+        const { title, content, category, video } = req.body;
         const user_id = req.session.user.id;
 
+        let imagePath = null;
+        if (req.file) {
+            imagePath = '/uploads/' + req.file.filename;
+        }
+
         await db.query(
-            'INSERT INTO posts (title, content, category, image, user_id, likes, rating) VALUES (?, ?, ?, ?, ?, 0, 0)',
-            [title, content, category, image || null, user_id]
+            `INSERT INTO posts (title, content, category, image, video, user_id, likes, rating)
+             VALUES (?, ?, ?, ?, ?, ?, 0, 0)`,
+            [title, content, category, imagePath, video || null, user_id]
         );
 
         res.redirect('/posts');
     } catch (err) {
         console.error(err);
         res.status(500).send("Server Error");
+    }
+});
+
+// ======================
+// EDIT POST PAGE
+// ======================
+router.get('/:id/edit', async (req, res) => {
+    try {
+        if (!req.session.user) {
+            return res.redirect('/login');
+        }
+
+        const [posts] = await db.query(
+            'SELECT * FROM posts WHERE id = ?',
+            [req.params.id]
+        );
+
+        if (!posts.length) {
+            return res.status(404).send('Post not found');
+        }
+
+        const post = posts[0];
+
+        if (post.user_id !== req.session.user.id) {
+            return res.status(403).send('You can only edit your own posts');
+        }
+
+        res.render('edit-post', { post });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+});
+
+// ======================
+// EDIT POST SUBMIT
+// ======================
+router.post('/:id/edit', upload.single('image'), async (req, res) => {
+    try {
+        if (!req.session.user) {
+            return res.redirect('/login');
+        }
+
+        const [posts] = await db.query(
+            'SELECT * FROM posts WHERE id = ?',
+            [req.params.id]
+        );
+
+        if (!posts.length) {
+            return res.status(404).send('Post not found');
+        }
+
+        const oldPost = posts[0];
+
+        if (oldPost.user_id !== req.session.user.id) {
+            return res.status(403).send('You can only edit your own posts');
+        }
+
+        const { title, content, category, video } = req.body;
+
+        let imagePath = oldPost.image;
+        if (req.file) {
+            imagePath = '/uploads/' + req.file.filename;
+        }
+
+        await db.query(
+            `UPDATE posts
+             SET title = ?, content = ?, category = ?, image = ?, video = ?
+             WHERE id = ?`,
+            [title, content, category, imagePath, video || null, req.params.id]
+        );
+
+        res.redirect('/posts/' + req.params.id);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+});
+
+// ======================
+// DELETE POST
+// ======================
+router.post('/:id/delete', async (req, res) => {
+    try {
+        if (!req.session.user) {
+            return res.redirect('/login');
+        }
+
+        const [posts] = await db.query(
+            'SELECT * FROM posts WHERE id = ?',
+            [req.params.id]
+        );
+
+        if (!posts.length) {
+            return res.status(404).send('Post not found');
+        }
+
+        const post = posts[0];
+
+        if (post.user_id !== req.session.user.id) {
+            return res.status(403).send('You can only delete your own posts');
+        }
+
+        await db.query('DELETE FROM posts WHERE id = ?', [req.params.id]);
+
+        res.redirect('/posts');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
     }
 });
 
@@ -124,7 +273,6 @@ router.get('/:id', async (req, res) => {
             tags,
             comments
         });
-
     } catch (err) {
         console.error(err);
         res.status(500).send("Server Error");

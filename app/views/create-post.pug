@@ -4,7 +4,7 @@ block content
   .card
     h2 ✍️ Create New Post
 
-    form(action="/posts/create" method="POST")
+    form(action="/posts/create" method="POST" enctype="multipart/form-data")
       div(style="margin-bottom:16px;")
         label Title
         br
@@ -22,9 +22,14 @@ block content
           option(value="Other") Other
 
       div(style="margin-bottom:16px;")
-        label Image Path / URL
+        label Upload Image
         br
-        input(type="text" name="image" placeholder="/images/fortnite.jpg or https://..." style="width:100%; padding:8px; margin-top:4px;")
+        input(type="file" name="image" accept="image/*" style="width:100%; padding:8px; margin-top:4px;")
+
+      div(style="margin-bottom:16px;")
+        label Video URL (optional)
+        br
+        input(type="text" name="video" placeholder="https://www.youtube.com/embed/..." style="width:100%; padding:8px; margin-top:4px;")
 
       div(style="margin-bottom:16px;")
         label Content
