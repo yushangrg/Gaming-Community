@@ -1,35 +1,93 @@
 extends layout
 
 block content
-  .main
-    if !user
-      .center-card
-        h3 Access Your Profile
-        p Please login or create an account
+  - const currentUser = typeof user !== 'undefined' ? user : null
+  - const username = currentUser && currentUser.username ? currentUser.username : 'Guest'
+  - const initial = username.charAt(0).toUpperCase()
 
-        a(href="/login")
-          button Login
+  .profile-page
+    if currentUser
+      section.profile-hero-panel
+        .profile-hero-glow
+        .profile-hero-content
+          .profile-avatar-large= initial
+          span.profile-eyebrow Welcome back
+          h1= username
+          p Manage your gaming community profile, posts, and account activity.
 
-        a(href="/register")
-          button Create Account
+      .profile-layout
+        main.profile-main
+          .profile-card.profile-overview-card
+            .profile-card-head
+              h2 Profile Overview
+              a.profile-action-btn(href="/posts/create") Create Post
 
-        p(style="margin-top:10px") Continue browsing as guest
+            .profile-info-grid
+              .profile-info-box
+                span Username
+                strong= username
+
+              if currentUser.email
+                .profile-info-box
+                  span Email
+                  strong= currentUser.email
+
+              .profile-info-box
+                span Account ID
+                strong= currentUser.id || 'N/A'
+
+              .profile-info-box
+                span Status
+                strong Active Member
+
+          .profile-card
+            h2 Quick Actions
+            .profile-action-grid
+              a.profile-quick-action(href="/posts")
+                span 🎮
+                strong Browse Posts
+                small Discover community posts
+
+              a.profile-quick-action(href="/users")
+                span 👥
+                strong View Users
+                small Explore community members
+
+              a.profile-quick-action(href="/posts/create")
+                span ✍️
+                strong Create Post
+                small Share your gaming content
+
+        aside.profile-sidebar
+          .profile-card
+            h3 Account Stats
+            .profile-stat-list
+              .profile-stat-row
+                span Posts
+                strong= currentUser.post_count || currentUser.posts || 0
+              .profile-stat-row
+                span Points
+                strong= (currentUser.post_count || currentUser.posts || 0) * 25
+              .profile-stat-row
+                span Role
+                strong Member
+
+          .profile-card
+            h3 Community Tip
+            p.profile-muted Share guides, reviews, builds, and gaming moments to grow your profile.
+            a.profile-side-btn(href="/posts/create") Start Posting
+
     else
-      .profile-header
-        h2 👤 #{user.username}
-        p 📧 #{user.email}
-        p 📄 #{posts.length} posts
+      section.profile-login-panel
+        .profile-login-glow
+        .profile-login-card
+          .profile-login-icon 🔐
+          span.profile-eyebrow Account Required
+          h1 Access Your Profile
+          p Login or create an account to manage your profile, post content, comment, rate, and interact with the community.
 
-      h3 Your Posts
-      if posts.length === 0
-        p You have not created any posts yet.
-        a(href="/posts/create")
-          button ✍️ Create your first post
-      else
-        .clips
-          each post in posts
-            a(href=`/posts/${post.id}`)
-              .clip
-                p #{post.title}
-                p ⭐ #{post.rating} / 5
-                p 👍 #{post.likes} likes
+          .profile-login-actions
+            a.profile-action-btn(href="/login") Login
+            a.profile-secondary-btn(href="/register") Create Account
+
+          a.profile-guest-link(href="/posts") Continue browsing as guest

@@ -33,6 +33,8 @@ router.get('/', async (req, res) => {
         const category = req.query.category || '';
         const tag = req.query.tag || '';
         const search = req.query.search || '';
+        const userId = req.query.userId || '';
+        const username = req.query.username || '';
 
         let query = `
             SELECT DISTINCT posts.*, users.username
@@ -56,8 +58,18 @@ router.get('/', async (req, res) => {
         }
 
         if (search) {
-            query += ' AND (posts.title LIKE ? OR posts.content LIKE ?)';
-            params.push(`%${search}%`, `%${search}%`);
+            query += ' AND (posts.title LIKE ? OR posts.content LIKE ? OR users.username LIKE ?)';
+            params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+        }
+
+        if (userId) {
+            query += ' AND posts.user_id = ?';
+            params.push(userId);
+        }
+
+        if (!userId && username) {
+            query += ' AND users.username = ?';
+            params.push(username);
         }
 
         query += ' ORDER BY posts.id DESC';
@@ -69,6 +81,8 @@ router.get('/', async (req, res) => {
             category,
             tag,
             search,
+            userId,
+            username,
             user: req.session.user || null
         });
     } catch (err) {
@@ -130,7 +144,6 @@ router.get('/:id', async (req, res) => {
     try {
         const postId = req.params.id;
 
-        // First check that the post exists
         const [existingPosts] = await db.query(`
             SELECT id
             FROM posts
@@ -141,14 +154,12 @@ router.get('/:id', async (req, res) => {
             return res.status(404).send("Post not found");
         }
 
-        // Increase views whenever the detail page is opened
         await db.query(`
             UPDATE posts
             SET views = COALESCE(views, 0) + 1
             WHERE id = ?
         `, [postId]);
 
-        // Fetch the updated post after increasing views
         const [posts] = await db.query(`
             SELECT posts.*, users.username
             FROM posts

@@ -45,6 +45,7 @@ block content
               - const initial = username.charAt(0).toUpperCase()
               - const postsCount = getPostCount(member)
               - const rankLabel = index === 0 ? 'Top Member' : index < 3 ? 'Active Member' : 'Member'
+              - const viewPostsUrl = member.id ? `/posts?userId=${encodeURIComponent(member.id)}` : `/posts?username=${encodeURIComponent(username)}`
 
               article.user-card
                 .user-card-top
@@ -67,7 +68,7 @@ block content
                   .user-progress-bar(style=`width: ${Math.min(postsCount * 18, 100)}%`)
 
                 .user-card-actions
-                  a.user-action-btn(href=`/posts?search=${encodeURIComponent(username)}`) View Posts
+                  a.user-action-btn(href=viewPostsUrl) View Posts
 
       aside.users-sidebar
         .users-side-card
