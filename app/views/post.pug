@@ -26,7 +26,15 @@ block content
 
         .actions
           a(href=`/posts/${post.id}/like`)
-            button Like (#{post.likes})
+            button(type="button") Like (#{post.likes})
+
+        if user && user.id === post.user_id
+          div(style="margin:16px 0; display:flex; gap:10px; flex-wrap:wrap;")
+            a(href=`/posts/${post.id}/edit`)
+              button(type="button") ✏️ Edit Post
+
+            form(action=`/posts/${post.id}/delete` method="POST" onsubmit="return confirm('Are you sure you want to delete this post?');")
+              button(type="submit") 🗑 Delete Post
 
         p Rating: #{post.rating ? parseFloat(post.rating).toFixed(1) : '0'} / 5
 
@@ -46,8 +54,11 @@ block content
             |  to rate this post
 
         h4 Tags
-        each tag in tags
-          a(href=`/posts?tag=${tag.name}` style="margin-right:10px") #{tag.name}
+        if tags.length === 0
+          p No tags yet.
+        else
+          each tag in tags
+            a(href=`/posts?tag=${tag.name}` style="margin-right:10px") #{tag.name}
 
       .sidebar
         h3 Comments

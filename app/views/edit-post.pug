@@ -1,0 +1,46 @@
+extends layout
+
+block content
+  .card
+    h2 ✏️ Edit Post
+
+    form(action=`/posts/${post.id}/edit` method="POST" enctype="multipart/form-data")
+      div(style="margin-bottom:16px;")
+        label Title
+        br
+        input(type="text" name="title" value=post.title required style="width:100%; padding:8px; margin-top:4px;")
+
+      div(style="margin-bottom:16px;")
+        label Category
+        br
+        select(name="category" style="width:100%; padding:8px; margin-top:4px;")
+          option(value="FPS" selected=post.category==='FPS') FPS
+          option(value="RPG" selected=post.category==='RPG') RPG
+          option(value="Tips" selected=post.category==='Tips') Tips
+          option(value="Mobile" selected=post.category==='Mobile') Mobile
+          option(value="Indie" selected=post.category==='Indie') Indie
+          option(value="Other" selected=post.category==='Other') Other
+
+      if post.image
+        div(style="margin-bottom:16px;")
+          p Current Image
+          img(src=post.image style="max-width:300px; max-height:200px; object-fit:contain; background:#111; border-radius:10px;")
+
+      div(style="margin-bottom:16px;")
+        label Upload New Image
+        br
+        input(type="file" name="image" accept="image/*" style="width:100%; padding:8px; margin-top:4px;")
+
+      div(style="margin-bottom:16px;")
+        label Video URL (optional)
+        br
+        input(type="text" name="video" value=post.video || '' placeholder="https://www.youtube.com/embed/..." style="width:100%; padding:8px; margin-top:4px;")
+
+      div(style="margin-bottom:16px;")
+        label Content
+        br
+        textarea(name="content" rows="6" required style="width:100%; padding:8px; margin-top:4px;")= post.content
+
+      button(type="submit" style="padding:10px 24px; margin-right:10px;") 💾 Save Changes
+      a(href=`/posts/${post.id}`)
+        button(type="button" style="padding:10px 24px;") Cancel
