@@ -1,40 +1,29 @@
 const express = require('express');
 const db = require('../services/db');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 
 const router = express.Router();
 
-// make sure upload folder exists
-const uploadDir = path.join(__dirname, '../../static/uploads');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
+function buildCommentTree(comments) {
+    const map = {};
+    const roots = [];
+
+    comments.forEach(comment => {
+        comment.replies = [];
+        map[comment.id] = comment;
+    });
+
+    comments.forEach(comment => {
+        if (comment.parent_id) {
+            if (map[comment.parent_id]) {
+                map[comment.parent_id].replies.push(comment);
+            }
+        } else {
+            roots.push(comment);
+        }
+    });
+
+    return roots;
 }
-
-// multer config
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        const uniqueName = Date.now() + '-' + file.originalname.replace(/\s+/g, '-');
-        cb(null, uniqueName);
-    }
-});
-
-const fileFilter = (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-        cb(null, true);
-    } else {
-        cb(new Error('Only image files are allowed'), false);
-    }
-};
-
-const upload = multer({
-    storage,
-    fileFilter
-});
 
 // ======================
 // LISTING PAGE
@@ -90,7 +79,6 @@ router.get('/create', async (req, res) => {
         if (!req.session.user) {
             return res.redirect('/login');
         }
-
         res.render('create-post');
     } catch (err) {
         console.error(err);
@@ -101,139 +89,24 @@ router.get('/create', async (req, res) => {
 // ======================
 // CREATE POST SUBMIT
 // ======================
-router.post('/create', upload.single('image'), async (req, res) => {
+router.post('/create', async (req, res) => {
     try {
         if (!req.session.user) {
             return res.redirect('/login');
         }
 
-        const { title, content, category, video } = req.body;
+        const { title, content, category, image, video } = req.body;
         const user_id = req.session.user.id;
 
-        let imagePath = null;
-        if (req.file) {
-            imagePath = '/uploads/' + req.file.filename;
-        }
-
         await db.query(
-            `INSERT INTO posts (title, content, category, image, video, user_id, likes, rating)
-             VALUES (?, ?, ?, ?, ?, ?, 0, 0)`,
-            [title, content, category, imagePath, video || null, user_id]
+            'INSERT INTO posts (title, content, category, image, video, user_id, likes, rating) VALUES (?, ?, ?, ?, ?, ?, 0, 0)',
+            [title, content, category, image || null, video || null, user_id]
         );
 
         res.redirect('/posts');
     } catch (err) {
         console.error(err);
         res.status(500).send("Server Error");
-    }
-});
-
-// ======================
-// EDIT POST PAGE
-// ======================
-router.get('/:id/edit', async (req, res) => {
-    try {
-        if (!req.session.user) {
-            return res.redirect('/login');
-        }
-
-        const [posts] = await db.query(
-            'SELECT * FROM posts WHERE id = ?',
-            [req.params.id]
-        );
-
-        if (!posts.length) {
-            return res.status(404).send('Post not found');
-        }
-
-        const post = posts[0];
-
-        if (post.user_id !== req.session.user.id) {
-            return res.status(403).send('You can only edit your own posts');
-        }
-
-        res.render('edit-post', { post });
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Server Error');
-    }
-});
-
-// ======================
-// EDIT POST SUBMIT
-// ======================
-router.post('/:id/edit', upload.single('image'), async (req, res) => {
-    try {
-        if (!req.session.user) {
-            return res.redirect('/login');
-        }
-
-        const [posts] = await db.query(
-            'SELECT * FROM posts WHERE id = ?',
-            [req.params.id]
-        );
-
-        if (!posts.length) {
-            return res.status(404).send('Post not found');
-        }
-
-        const oldPost = posts[0];
-
-        if (oldPost.user_id !== req.session.user.id) {
-            return res.status(403).send('You can only edit your own posts');
-        }
-
-        const { title, content, category, video } = req.body;
-
-        let imagePath = oldPost.image;
-        if (req.file) {
-            imagePath = '/uploads/' + req.file.filename;
-        }
-
-        await db.query(
-            `UPDATE posts
-             SET title = ?, content = ?, category = ?, image = ?, video = ?
-             WHERE id = ?`,
-            [title, content, category, imagePath, video || null, req.params.id]
-        );
-
-        res.redirect('/posts/' + req.params.id);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Server Error');
-    }
-});
-
-// ======================
-// DELETE POST
-// ======================
-router.post('/:id/delete', async (req, res) => {
-    try {
-        if (!req.session.user) {
-            return res.redirect('/login');
-        }
-
-        const [posts] = await db.query(
-            'SELECT * FROM posts WHERE id = ?',
-            [req.params.id]
-        );
-
-        if (!posts.length) {
-            return res.status(404).send('Post not found');
-        }
-
-        const post = posts[0];
-
-        if (post.user_id !== req.session.user.id) {
-            return res.status(403).send('You can only delete your own posts');
-        }
-
-        await db.query('DELETE FROM posts WHERE id = ?', [req.params.id]);
-
-        res.redirect('/posts');
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Server Error');
     }
 });
 
@@ -253,6 +126,8 @@ router.get('/:id', async (req, res) => {
             return res.status(404).send("Post not found");
         }
 
+        const post = posts[0];
+
         const [tags] = await db.query(`
             SELECT tags.name
             FROM tags
@@ -260,19 +135,67 @@ router.get('/:id', async (req, res) => {
             WHERE post_tags.post_id = ?
         `, [req.params.id]);
 
-        const [comments] = await db.query(`
-            SELECT comments.comment AS content, users.username
+        const [rawComments] = await db.query(`
+            SELECT comments.id,
+                   comments.post_id,
+                   comments.user_id,
+                   comments.parent_id,
+                   comments.comment AS content,
+                   comments.created_at,
+                   users.username
             FROM comments
             JOIN users ON comments.user_id = users.id
             WHERE comments.post_id = ?
-            ORDER BY comments.id DESC
+            ORDER BY comments.created_at ASC
         `, [req.params.id]);
 
-        res.render('post', {
-            post: posts[0],
-            tags,
-            comments
+        const commentIds = rawComments.map(c => c.id);
+
+        let reactionRows = [];
+        let reportedRows = [];
+
+        if (commentIds.length > 0) {
+            [reactionRows] = await db.query(`
+                SELECT comment_id, reaction, COUNT(*) AS total
+                FROM comment_reactions
+                WHERE comment_id IN (?)
+                GROUP BY comment_id, reaction
+            `, [commentIds]);
+
+            if (req.session.user) {
+                [reportedRows] = await db.query(`
+                    SELECT comment_id
+                    FROM comment_reports
+                    WHERE user_id = ? AND comment_id IN (?)
+                `, [req.session.user.id, commentIds]);
+            }
+        }
+
+        const reactionMap = {};
+        reactionRows.forEach(row => {
+            if (!reactionMap[row.comment_id]) {
+                reactionMap[row.comment_id] = { like: 0, helpful: 0, funny: 0 };
+            }
+            reactionMap[row.comment_id][row.reaction] = row.total;
         });
+
+        const reportedSet = new Set(reportedRows.map(r => r.comment_id));
+
+        const comments = rawComments.map(comment => ({
+            ...comment,
+            reactionCounts: reactionMap[comment.id] || { like: 0, helpful: 0, funny: 0 },
+            hasReported: reportedSet.has(comment.id),
+            isOwner: req.session.user && req.session.user.id === comment.user_id
+        }));
+
+        const commentTree = buildCommentTree(comments);
+
+        res.render('post', {
+            post,
+            tags,
+            comments: commentTree
+        });
+
     } catch (err) {
         console.error(err);
         res.status(500).send("Server Error");
@@ -328,7 +251,7 @@ router.post('/:id/rate', async (req, res) => {
 });
 
 // ======================
-// COMMENT ON A POST
+// ADD TOP-LEVEL COMMENT
 // ======================
 router.post('/:id/comment', async (req, res) => {
     try {
@@ -345,11 +268,183 @@ router.post('/:id/comment', async (req, res) => {
         }
 
         await db.query(
-            'INSERT INTO comments (post_id, user_id, comment) VALUES (?, ?, ?)',
+            'INSERT INTO comments (post_id, user_id, comment, parent_id) VALUES (?, ?, ?, NULL)',
             [post_id, user_id, content]
         );
 
         res.redirect('/posts/' + post_id);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Server Error");
+    }
+});
+
+// ======================
+// REPLY TO COMMENT
+// ======================
+router.post('/:id/comment/:commentId/reply', async (req, res) => {
+    try {
+        if (!req.session.user) {
+            return res.redirect('/login');
+        }
+
+        const content = req.body.content;
+        const user_id = req.session.user.id;
+        const post_id = req.params.id;
+        const parent_id = req.params.commentId;
+
+        if (!content || !content.trim()) {
+            return res.redirect('/posts/' + post_id);
+        }
+
+        const [parentRows] = await db.query(
+            'SELECT id, post_id FROM comments WHERE id = ?',
+            [parent_id]
+        );
+
+        if (!parentRows.length || parentRows[0].post_id != post_id) {
+            return res.status(404).send('Parent comment not found');
+        }
+
+        await db.query(
+            'INSERT INTO comments (post_id, user_id, comment, parent_id) VALUES (?, ?, ?, ?)',
+            [post_id, user_id, content, parent_id]
+        );
+
+        res.redirect(`/posts/${post_id}#comment-${parent_id}`);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Server Error");
+    }
+});
+
+// ======================
+// REACT TO COMMENT
+// ======================
+router.post('/comments/:commentId/react', async (req, res) => {
+    try {
+        if (!req.session.user) {
+            return res.redirect('/login');
+        }
+
+        const commentId = req.params.commentId;
+        const userId = req.session.user.id;
+        const reaction = req.body.reaction;
+
+        if (!['like', 'helpful', 'funny'].includes(reaction)) {
+            return res.status(400).send('Invalid reaction');
+        }
+
+        const [commentRows] = await db.query(
+            'SELECT post_id FROM comments WHERE id = ?',
+            [commentId]
+        );
+
+        if (!commentRows.length) {
+            return res.status(404).send('Comment not found');
+        }
+
+        const postId = commentRows[0].post_id;
+
+        const [existing] = await db.query(
+            'SELECT * FROM comment_reactions WHERE comment_id = ? AND user_id = ?',
+            [commentId, userId]
+        );
+
+        if (existing.length) {
+            if (existing[0].reaction === reaction) {
+                await db.query(
+                    'DELETE FROM comment_reactions WHERE comment_id = ? AND user_id = ?',
+                    [commentId, userId]
+                );
+            } else {
+                await db.query(
+                    'UPDATE comment_reactions SET reaction = ? WHERE comment_id = ? AND user_id = ?',
+                    [reaction, commentId, userId]
+                );
+            }
+        } else {
+            await db.query(
+                'INSERT INTO comment_reactions (comment_id, user_id, reaction) VALUES (?, ?, ?)',
+                [commentId, userId, reaction]
+            );
+        }
+
+        res.redirect(`/posts/${postId}#comment-${commentId}`);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Server Error");
+    }
+});
+
+// ======================
+// REPORT COMMENT
+// ======================
+router.post('/comments/:commentId/report', async (req, res) => {
+    try {
+        if (!req.session.user) {
+            return res.redirect('/login');
+        }
+
+        const commentId = req.params.commentId;
+        const userId = req.session.user.id;
+
+        const [commentRows] = await db.query(
+            'SELECT post_id FROM comments WHERE id = ?',
+            [commentId]
+        );
+
+        if (!commentRows.length) {
+            return res.status(404).send('Comment not found');
+        }
+
+        const postId = commentRows[0].post_id;
+
+        await db.query(
+            'INSERT IGNORE INTO comment_reports (comment_id, user_id, reason) VALUES (?, ?, ?)',
+            [commentId, userId, 'Inappropriate']
+        );
+
+        res.redirect(`/posts/${postId}#comment-${commentId}`);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Server Error");
+    }
+});
+
+// ======================
+// DELETE OWN COMMENT
+// ======================
+router.post('/comments/:commentId/delete', async (req, res) => {
+    try {
+        if (!req.session.user) {
+            return res.redirect('/login');
+        }
+
+        const commentId = req.params.commentId;
+        const userId = req.session.user.id;
+
+        const [commentRows] = await db.query(
+            'SELECT id, user_id, post_id FROM comments WHERE id = ?',
+            [commentId]
+        );
+
+        if (!commentRows.length) {
+            return res.status(404).send('Comment not found');
+        }
+
+        const comment = commentRows[0];
+
+        if (comment.user_id !== userId) {
+            return res.status(403).send('You can only delete your own comments');
+        }
+
+        await db.query(
+            'DELETE FROM comments WHERE id = ?',
+            [commentId]
+        );
+
+        res.redirect(`/posts/${comment.post_id}`);
     } catch (err) {
         console.error(err);
         res.status(500).send("Server Error");
