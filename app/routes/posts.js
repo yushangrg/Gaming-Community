@@ -64,7 +64,13 @@ router.get('/', async (req, res) => {
 
         const [posts] = await db.query(query, params);
 
-        res.render('index', { posts, category, tag, search });
+        res.render('index', {
+            posts,
+            category,
+            tag,
+            search,
+            user: req.session.user || null
+        });
     } catch (err) {
         console.error(err);
         res.status(500).send("Server Error");
@@ -79,7 +85,10 @@ router.get('/create', async (req, res) => {
         if (!req.session.user) {
             return res.redirect('/login');
         }
-        res.render('create-post');
+
+        res.render('create-post', {
+            user: req.session.user || null
+        });
     } catch (err) {
         console.error(err);
         res.status(500).send("Server Error");
@@ -99,7 +108,11 @@ router.post('/create', async (req, res) => {
         const user_id = req.session.user.id;
 
         await db.query(
-            'INSERT INTO posts (title, content, category, image, video, user_id, likes, rating) VALUES (?, ?, ?, ?, ?, ?, 0, 0)',
+            `
+            INSERT INTO posts 
+            (title, content, category, image, video, user_id, likes, rating, views) 
+            VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0)
+            `,
             [title, content, category, image || null, video || null, user_id]
         );
 
@@ -115,16 +128,33 @@ router.post('/create', async (req, res) => {
 // ======================
 router.get('/:id', async (req, res) => {
     try {
+        const postId = req.params.id;
+
+        // First check that the post exists
+        const [existingPosts] = await db.query(`
+            SELECT id
+            FROM posts
+            WHERE id = ?
+        `, [postId]);
+
+        if (!existingPosts.length) {
+            return res.status(404).send("Post not found");
+        }
+
+        // Increase views whenever the detail page is opened
+        await db.query(`
+            UPDATE posts
+            SET views = COALESCE(views, 0) + 1
+            WHERE id = ?
+        `, [postId]);
+
+        // Fetch the updated post after increasing views
         const [posts] = await db.query(`
             SELECT posts.*, users.username
             FROM posts
             JOIN users ON posts.user_id = users.id
             WHERE posts.id = ?
-        `, [req.params.id]);
-
-        if (!posts.length) {
-            return res.status(404).send("Post not found");
-        }
+        `, [postId]);
 
         const post = posts[0];
 
@@ -133,7 +163,7 @@ router.get('/:id', async (req, res) => {
             FROM tags
             JOIN post_tags ON tags.id = post_tags.tag_id
             WHERE post_tags.post_id = ?
-        `, [req.params.id]);
+        `, [postId]);
 
         const [rawComments] = await db.query(`
             SELECT comments.id,
@@ -147,7 +177,7 @@ router.get('/:id', async (req, res) => {
             JOIN users ON comments.user_id = users.id
             WHERE comments.post_id = ?
             ORDER BY comments.created_at ASC
-        `, [req.params.id]);
+        `, [postId]);
 
         const commentIds = rawComments.map(c => c.id);
 
@@ -172,10 +202,16 @@ router.get('/:id', async (req, res) => {
         }
 
         const reactionMap = {};
+
         reactionRows.forEach(row => {
             if (!reactionMap[row.comment_id]) {
-                reactionMap[row.comment_id] = { like: 0, helpful: 0, funny: 0 };
+                reactionMap[row.comment_id] = {
+                    like: 0,
+                    helpful: 0,
+                    funny: 0
+                };
             }
+
             reactionMap[row.comment_id][row.reaction] = row.total;
         });
 
@@ -183,7 +219,11 @@ router.get('/:id', async (req, res) => {
 
         const comments = rawComments.map(comment => ({
             ...comment,
-            reactionCounts: reactionMap[comment.id] || { like: 0, helpful: 0, funny: 0 },
+            reactionCounts: reactionMap[comment.id] || {
+                like: 0,
+                helpful: 0,
+                funny: 0
+            },
             hasReported: reportedSet.has(comment.id),
             isOwner: req.session.user && req.session.user.id === comment.user_id
         }));
@@ -193,7 +233,8 @@ router.get('/:id', async (req, res) => {
         res.render('post', {
             post,
             tags,
-            comments: commentTree
+            comments: commentTree,
+            user: req.session.user || null
         });
 
     } catch (err) {
@@ -212,7 +253,7 @@ router.get('/:id/like', async (req, res) => {
         }
 
         await db.query(
-            'UPDATE posts SET likes = likes + 1 WHERE id = ?',
+            'UPDATE posts SET likes = COALESCE(likes, 0) + 1 WHERE id = ?',
             [req.params.id]
         );
 
@@ -269,7 +310,7 @@ router.post('/:id/comment', async (req, res) => {
 
         await db.query(
             'INSERT INTO comments (post_id, user_id, comment, parent_id) VALUES (?, ?, ?, NULL)',
-            [post_id, user_id, content]
+            [post_id, user_id, content.trim()]
         );
 
         res.redirect('/posts/' + post_id);
@@ -308,7 +349,7 @@ router.post('/:id/comment/:commentId/reply', async (req, res) => {
 
         await db.query(
             'INSERT INTO comments (post_id, user_id, comment, parent_id) VALUES (?, ?, ?, ?)',
-            [post_id, user_id, content, parent_id]
+            [post_id, user_id, content.trim(), parent_id]
         );
 
         res.redirect(`/posts/${post_id}#comment-${parent_id}`);
