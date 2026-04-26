@@ -1,6 +1,15 @@
 /* =========================================================
    GAMING COMMUNITY - PROFESSIONAL DARK THEME
+   Supports:
+   - Navbar / Footer
+   - Posts listing page
+   - Single post detail page
+   - Users page
+   - Profile page with edit form
+   - Auth pages
+   - Legal pages: About, Privacy, Terms, Support
 ========================================================= */
+
 
 /* =========================================================
    01. RESET / THEME VARIABLES
@@ -70,6 +79,7 @@ body {
   color: #fff;
 }
 
+
 /* =========================================================
    02. BASE ELEMENTS
 ========================================================= */
@@ -103,6 +113,7 @@ p {
   color: var(--text-soft);
 }
 
+
 /* =========================================================
    03. NAVBAR
 ========================================================= */
@@ -110,7 +121,7 @@ p {
   position: sticky;
   top: 0;
   z-index: 1000;
-  height: 78px;
+  min-height: 78px;
   padding: 0 42px;
   display: flex;
   align-items: center;
@@ -127,8 +138,9 @@ p {
   align-items: center;
   color: #fff;
   font-size: 1.35rem;
-  font-weight: 950;
+  font-weight: 900;
   letter-spacing: -0.04em;
+  white-space: nowrap;
 }
 
 .navbar div:first-child::before {
@@ -167,6 +179,7 @@ p {
   padding: 11px 18px;
 }
 
+
 /* =========================================================
    04. SHARED LAYOUT / CARDS
 ========================================================= */
@@ -195,7 +208,9 @@ p {
 .users-empty-card,
 .profile-card,
 .main-content,
-.premium-card {
+.premium-card,
+.legal-card,
+.support-card {
   background:
     radial-gradient(circle at top right, rgba(139, 92, 246, 0.12), transparent 34%),
     linear-gradient(180deg, var(--card), var(--card-2));
@@ -238,6 +253,7 @@ p {
   border-color: rgba(168, 85, 247, 0.3);
 }
 
+
 /* =========================================================
    05. FORMS / BUTTONS
 ========================================================= */
@@ -245,6 +261,7 @@ form input[type="text"],
 form input[type="email"],
 form input[type="password"],
 form input[type="file"],
+form input[type="url"],
 form textarea,
 form select,
 .search-input {
@@ -355,8 +372,9 @@ button:hover,
   border-color: rgba(239, 68, 68, 0.32);
 }
 
+
 /* =========================================================
-   06. FOOTER - FIXED GAMING BLOCK
+   06. FOOTER
 ========================================================= */
 .footer {
   margin-top: 60px;
@@ -429,6 +447,7 @@ button:hover,
   color: #fff;
   line-height: 1;
 }
+
 
 /* =========================================================
    07. HOME / GENERAL POST CARDS
@@ -582,6 +601,7 @@ button:hover,
   color: #fff;
 }
 
+
 /* =========================================================
    08. POSTS LISTING PAGE
 ========================================================= */
@@ -612,7 +632,8 @@ button:hover,
 .posts-hero-panel::before,
 .users-hero-panel::before,
 .profile-login-panel::before,
-.profile-hero-panel::before {
+.profile-hero-panel::before,
+.legal-hero::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -990,6 +1011,7 @@ button:hover,
   text-align: center;
 }
 
+
 /* =========================================================
    09. SINGLE POST DETAIL PAGE
 ========================================================= */
@@ -1253,6 +1275,7 @@ button:hover,
   margin-top: 0;
 }
 
+
 /* =========================================================
    10. COMMENTS
 ========================================================= */
@@ -1430,6 +1453,7 @@ button:hover,
   gap: 12px;
   margin-top: 12px;
 }
+
 
 /* =========================================================
    11. USERS PAGE
@@ -1702,6 +1726,7 @@ button:hover,
   font-weight: 950;
 }
 
+
 /* =========================================================
    12. PROFILE PAGE
 ========================================================= */
@@ -1793,6 +1818,7 @@ button:hover,
   color: #fff;
   background: rgba(15, 23, 42, 0.85);
   border: 1px solid rgba(168, 85, 247, 0.38);
+  box-shadow: none;
 }
 
 .profile-guest-link {
@@ -1817,6 +1843,16 @@ button:hover,
   height: 92px;
   margin: 0 auto 18px;
   font-size: 2.4rem;
+}
+
+.profile-avatar-image {
+  width: 96px;
+  height: 96px;
+  margin: 0 auto 18px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 3px solid rgba(168, 85, 247, 0.55);
+  box-shadow: 0 18px 42px rgba(124, 58, 237, 0.38);
 }
 
 .profile-layout {
@@ -1852,6 +1888,11 @@ button:hover,
   margin-bottom: 16px;
 }
 
+.profile-card h4 {
+  margin-bottom: 8px;
+  font-size: 1.15rem;
+}
+
 .profile-info-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1878,6 +1919,46 @@ button:hover,
 .profile-mini-stat strong {
   color: #fff;
   font-size: 1.1rem;
+  word-break: break-word;
+}
+
+.profile-info-box a {
+  color: #c084fc;
+  font-weight: 900;
+  word-break: break-word;
+}
+
+.profile-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.profile-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group.full {
+  grid-column: 1 / -1;
+}
+
+.form-group label {
+  color: var(--text-soft);
+  font-size: 0.88rem;
+  font-weight: 900;
+}
+
+.profile-form-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .profile-action-grid {
@@ -1946,8 +2027,94 @@ button:hover,
   margin-bottom: 16px;
 }
 
+.profile-post-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profile-post-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(7, 16, 33, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  transition: 0.2s ease;
+}
+
+.profile-post-item:hover {
+  transform: translateY(-2px);
+  border-color: rgba(168, 85, 247, 0.42);
+  background: rgba(15, 23, 42, 0.92);
+}
+
+.profile-post-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.profile-post-content strong {
+  color: #fff;
+  font-size: 1rem;
+}
+
+.profile-post-content span {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.profile-post-arrow {
+  color: #c084fc;
+  font-weight: 950;
+  font-size: 1.3rem;
+}
+
+.profile-sidebar-avatar,
+.profile-sidebar-avatar-fallback {
+  width: 88px;
+  height: 88px;
+  margin-bottom: 16px;
+  border-radius: 999px;
+}
+
+.profile-sidebar-avatar {
+  object-fit: cover;
+  border: 3px solid rgba(168, 85, 247, 0.5);
+  box-shadow: 0 14px 32px rgba(124, 58, 237, 0.28);
+}
+
+.profile-sidebar-avatar-fallback {
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 2rem;
+  font-weight: 950;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.28), transparent 24%),
+    linear-gradient(135deg, var(--purple-dark), #2563eb);
+  box-shadow: 0 14px 32px rgba(124, 58, 237, 0.28);
+}
+
+.profile-badge {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  color: #e9d5ff;
+  background: rgba(124, 58, 237, 0.2);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+
 /* =========================================================
-   13. AUTH / PROFILE FORMS
+   13. AUTH PAGES
 ========================================================= */
 .auth-box,
 .profile-box {
@@ -1974,8 +2141,127 @@ button:hover,
   gap: 14px;
 }
 
+
 /* =========================================================
-   14. FALLBACK FOR OLD SIMPLE PROFILE MARKUP
+   14. LEGAL / STATIC CONTENT PAGES
+========================================================= */
+.legal-page {
+  width: min(1100px, 92%);
+  margin: 0 auto;
+  padding: 42px 0 80px;
+}
+
+.legal-hero {
+  position: relative;
+  overflow: hidden;
+  min-height: 260px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 42px 24px;
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  background:
+    linear-gradient(90deg, rgba(4, 10, 22, 0.96), rgba(9, 18, 34, 0.7), rgba(4, 10, 22, 0.96)),
+    radial-gradient(circle at 25% 40%, rgba(59, 130, 246, 0.24), transparent 30%),
+    radial-gradient(circle at 75% 35%, rgba(168, 85, 247, 0.42), transparent 34%),
+    linear-gradient(135deg, #07101f, #0f172a);
+  box-shadow: var(--shadow);
+  margin-bottom: 26px;
+}
+
+.legal-hero-content {
+  position: relative;
+  z-index: 2;
+  width: min(760px, 92%);
+}
+
+.legal-eyebrow {
+  display: inline-flex;
+  margin-bottom: 12px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  color: #e9d5ff;
+  background: rgba(124, 58, 237, 0.22);
+  border: 1px solid rgba(168, 85, 247, 0.34);
+  font-weight: 900;
+  font-size: 0.84rem;
+}
+
+.legal-hero h1 {
+  font-size: clamp(2.4rem, 5vw, 4.8rem);
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -0.07em;
+  margin-bottom: 16px;
+}
+
+.legal-hero p {
+  font-size: 1.05rem;
+  color: var(--text-soft);
+}
+
+.legal-card {
+  padding: 30px;
+}
+
+.legal-card + .legal-card {
+  margin-top: 20px;
+}
+
+.legal-card h2 {
+  font-size: 1.55rem;
+  margin-bottom: 14px;
+}
+
+.legal-card h3 {
+  margin: 20px 0 8px;
+  font-size: 1.12rem;
+}
+
+.legal-card p {
+  margin-bottom: 12px;
+  color: var(--text-soft);
+}
+
+.legal-card ul,
+.legal-card ol {
+  margin: 12px 0 12px 22px;
+  color: var(--text-soft);
+}
+
+.legal-card li {
+  margin-bottom: 8px;
+}
+
+.support-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-top: 22px;
+}
+
+.support-card {
+  padding: 22px;
+}
+
+.support-card span {
+  display: block;
+  font-size: 2rem;
+  margin-bottom: 10px;
+}
+
+.support-card h3 {
+  margin-bottom: 8px;
+}
+
+.support-card p {
+  color: var(--muted);
+}
+
+
+/* =========================================================
+   15. FALLBACK FOR OLD SIMPLE MARKUP
 ========================================================= */
 body > h2,
 body > h3 {
@@ -1994,8 +2280,9 @@ body > h3 + p + a {
   margin-left: 2%;
 }
 
+
 /* =========================================================
-   15. RESPONSIVE
+   16. RESPONSIVE
 ========================================================= */
 @media (max-width: 1250px) {
   .posts-dashboard-layout {
@@ -2025,6 +2312,10 @@ body > h3 + p + a {
   .users-sidebar,
   .profile-sidebar {
     order: 2;
+  }
+
+  .support-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -2065,6 +2356,7 @@ body > h3 + p + a {
   .navbar div:last-child {
     width: 100%;
     justify-content: center;
+    gap: 10px;
   }
 
   .hero {
@@ -2090,7 +2382,8 @@ body > h3 + p + a {
   .users-page,
   .posts-dashboard-page,
   .post-premium-page,
-  .post-detail-page {
+  .post-detail-page,
+  .legal-page {
     width: min(94%, 94%);
     padding-top: 24px;
   }
@@ -2100,8 +2393,13 @@ body > h3 + p + a {
   }
 
   .profile-info-grid,
-  .profile-action-grid {
+  .profile-action-grid,
+  .profile-form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .form-group.full {
+    grid-column: auto;
   }
 
   .profile-card-head,
@@ -2116,8 +2414,13 @@ body > h3 + p + a {
 
   .profile-action-btn,
   .profile-secondary-btn,
-  .profile-side-btn {
+  .profile-side-btn,
+  .profile-form-actions .profile-action-btn {
     width: 100%;
+  }
+
+  .profile-form-actions {
+    justify-content: stretch;
   }
 
   .users-hero-stats {
@@ -2137,7 +2440,9 @@ body > h3 + p + a {
   .ui-card,
   .post-hero-card,
   .hero-card,
-  .premium-card {
+  .premium-card,
+  .profile-card,
+  .legal-card {
     padding: 18px;
     border-radius: 18px;
   }
@@ -2178,10 +2483,16 @@ body > h3 + p + a {
   .premium-comment.is-reply {
     margin-left: 8px;
   }
+
+  .profile-post-item {
+    align-items: flex-start;
+  }
 }
 
 @media (max-width: 650px) {
-  .posts-hero-content h1 {
+  .posts-hero-content h1,
+  .users-hero-content h1,
+  .legal-hero h1 {
     font-size: 2.6rem;
   }
 

@@ -1,47 +1,125 @@
 extends layout
 
 block content
-  - const currentUser = typeof user !== 'undefined' ? user : null
-  - const username = currentUser && currentUser.username ? currentUser.username : 'Guest'
-  - const initial = username.charAt(0).toUpperCase()
+  if !user
+    .profile-page
+      .profile-login-panel
+        .profile-login-glow
+        .profile-login-card
+          .profile-login-icon 🎮
+          span.profile-eyebrow Member Access
+          h1 Access Your Profile
+          p Login or create an account to manage your profile, publish posts, comment, rate games, and join the community.
 
-  .profile-page
-    if currentUser
-      section.profile-hero-panel
+          .profile-login-actions
+            a.profile-action-btn(href="/login") Login
+            a.profile-secondary-btn(href="/register") Create Account
+
+          a.profile-guest-link(href="/posts") Continue browsing as guest
+
+  else
+    - const userInitial = user.username ? user.username.charAt(0).toUpperCase() : 'U'
+    - const avatar = user.avatar_url && user.avatar_url.trim() ? user.avatar_url : null
+    - const safeStats = typeof stats !== 'undefined' ? stats : { postCount: 0, points: 0, totalViews: 0, totalLikes: 0 }
+
+    .profile-page
+      .profile-hero-panel
         .profile-hero-glow
         .profile-hero-content
-          .profile-avatar-large= initial
+          if avatar
+            img.profile-avatar-image(src=avatar alt=user.username)
+          else
+            .profile-avatar-large= userInitial
+
           span.profile-eyebrow Welcome back
-          h1= username
-          p Manage your gaming community profile, posts, and account activity.
+          h1= user.username
+          if user.bio
+            p= user.bio
+          else
+            p Manage your gaming community profile, posts, and account activity.
 
       .profile-layout
         main.profile-main
-          .profile-card.profile-overview-card
+          .profile-card
             .profile-card-head
-              h2 Profile Overview
+              div
+                h2 Profile Overview
+                p.profile-muted Your public community information.
               a.profile-action-btn(href="/posts/create") Create Post
 
             .profile-info-grid
               .profile-info-box
                 span Username
-                strong= username
+                strong= user.username
 
-              if currentUser.email
-                .profile-info-box
-                  span Email
-                  strong= currentUser.email
+              .profile-info-box
+                span Email
+                strong= user.email
+
+              .profile-info-box
+                span Location
+                strong= user.location || 'Not added'
+
+              .profile-info-box
+                span Favorite Game
+                strong= user.favorite_game || 'Not added'
+
+              .profile-info-box
+                span Website
+                if user.website
+                  a(href=user.website target="_blank")= user.website
+                else
+                  strong Not added
 
               .profile-info-box
                 span Account ID
-                strong= currentUser.id || 'N/A'
-
-              .profile-info-box
-                span Status
-                strong Active Member
+                strong= user.id
 
           .profile-card
-            h2 Quick Actions
+            .profile-card-head
+              div
+                h2 Edit Profile
+                p.profile-muted Add a photo, bio, location, favorite game, and website.
+
+            form.profile-edit-form(action="/profile/update" method="POST")
+              .profile-form-grid
+                .form-group
+                  label Username
+                  input(type="text" name="username" value=user.username required)
+
+                .form-group
+                  label Email
+                  input(type="email" name="email" value=user.email required)
+
+                .form-group.full
+                  label Profile Photo URL
+                  input(type="text" name="avatar_url" value=user.avatar_url || '' placeholder="https://example.com/photo.jpg")
+
+                .form-group.full
+                  label Bio
+                  textarea(name="bio" rows="4" placeholder="Write a short bio about yourself...")= user.bio || ''
+
+                .form-group
+                  label Location
+                  input(type="text" name="location" value=user.location || '' placeholder="London, UK")
+
+                .form-group
+                  label Favorite Game
+                  input(type="text" name="favorite_game" value=user.favorite_game || '' placeholder="Elden Ring, GTA V, Fortnite...")
+
+                .form-group.full
+                  label Website
+                  input(type="text" name="website" value=user.website || '' placeholder="https://yourwebsite.com")
+
+              .profile-form-actions
+                button.profile-action-btn(type="submit") Save Profile
+
+          .profile-card
+            .profile-card-head
+              div
+                h2 Quick Actions
+                p.profile-muted Shortcuts for your community activity.
+
             .profile-action-grid
               a.profile-quick-action(href="/posts")
                 span 🎮
@@ -58,36 +136,67 @@ block content
                 strong Create Post
                 small Share your gaming content
 
+          if posts && posts.length
+            .profile-card
+              .profile-card-head
+                div
+                  h2 My Posts
+                  p.profile-muted Posts you have shared with the community.
+
+              .profile-post-list
+                each post in posts
+                  a.profile-post-item(href=`/posts/${post.id}`)
+                    .profile-post-content
+                      strong= post.title
+                      span #{post.category || 'Gaming'} • #{post.comment_count || 0} comments • #{post.likes || 0} likes
+                    span.profile-post-arrow →
+          else
+            .profile-card
+              h2 My Posts
+              p.profile-muted You have not created any posts yet.
+              a.profile-action-btn(href="/posts/create") Create Your First Post
+
         aside.profile-sidebar
           .profile-card
             h3 Account Stats
             .profile-stat-list
               .profile-stat-row
                 span Posts
-                strong= currentUser.post_count || currentUser.posts || 0
+                strong= safeStats.postCount
+
               .profile-stat-row
                 span Points
-                strong= (currentUser.post_count || currentUser.posts || 0) * 25
+                strong= safeStats.points
+
+              .profile-stat-row
+                span Total Likes
+                strong= safeStats.totalLikes
+
+              .profile-stat-row
+                span Total Views
+                strong= safeStats.totalViews
+
               .profile-stat-row
                 span Role
                 strong Member
 
           .profile-card
+            h3 Public Profile
+            if avatar
+              img.profile-sidebar-avatar(src=avatar alt=user.username)
+            else
+              .profile-sidebar-avatar-fallback= userInitial
+
+            h4= user.username
+            p.profile-muted= user.bio || 'No bio added yet.'
+
+            if user.favorite_game
+              .profile-badge Favorite: #{user.favorite_game}
+
+            if user.location
+              .profile-badge Location: #{user.location}
+
+          .profile-card
             h3 Community Tip
             p.profile-muted Share guides, reviews, builds, and gaming moments to grow your profile.
             a.profile-side-btn(href="/posts/create") Start Posting
-
-    else
-      section.profile-login-panel
-        .profile-login-glow
-        .profile-login-card
-          .profile-login-icon 🔐
-          span.profile-eyebrow Account Required
-          h1 Access Your Profile
-          p Login or create an account to manage your profile, post content, comment, rate, and interact with the community.
-
-          .profile-login-actions
-            a.profile-action-btn(href="/login") Login
-            a.profile-secondary-btn(href="/register") Create Account
-
-          a.profile-guest-link(href="/posts") Continue browsing as guest
