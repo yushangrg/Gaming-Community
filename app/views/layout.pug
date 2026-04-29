@@ -7,19 +7,27 @@ html
     link(rel="stylesheet", href="/style.css")
 
   body
+    - const navUser = (typeof currentUser !== 'undefined' && currentUser) ? currentUser : (typeof user !== 'undefined' ? user : null)
+
     .navbar
       div GAMING-COMMUNITY
+
       div
         a(href="/") Home
         a(href="/posts") Posts
         a(href="/users") Users
-        a(href="/profile") Profile
 
-        if !user
-          a(href="/login") Login
-        else
+        if navUser
           a(href="/posts/create") Create Post
+          a(href="/posts/saved") 💾 Saved
+          a(href="/profile") Profile
+          a(href=`/users/${navUser.id}`) My Public Profile
+          a(href=`/users/${navUser.id}/followers`) Followers
+          a(href=`/users/${navUser.id}/following`) Following
           a(href="/logout") Logout
+        else
+          a(href="/login") Login
+          a(href="/register") Register
 
     block content
 

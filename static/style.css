@@ -1,11 +1,12 @@
 /* =========================================================
    GAMING COMMUNITY - PROFESSIONAL DARK THEME
-   Supports:
+   Features:
    - Navbar / Footer
    - Posts listing page
    - Single post detail page
    - Save posts feature
    - Follow creator/user feature
+   - Followers / Following pages
    - Users page
    - Public user profiles
    - Profile page with edit form
@@ -54,6 +55,7 @@
   --glow: 0 12px 32px rgba(124, 58, 237, 0.32);
   --green-glow: 0 12px 32px rgba(34, 197, 94, 0.22);
   --blue-glow: 0 12px 32px rgba(56, 189, 248, 0.22);
+  --red-glow: 0 12px 32px rgba(239, 68, 68, 0.22);
 
   --radius-sm: 10px;
   --radius-md: 14px;
@@ -118,6 +120,14 @@ p {
   color: var(--text-soft);
 }
 
+small {
+  color: var(--muted);
+}
+
+form {
+  margin: 0;
+}
+
 
 /* =========================================================
    03. NAVBAR
@@ -158,16 +168,18 @@ p {
 .navbar div:last-child {
   display: flex;
   align-items: center;
-  gap: 20px;
+  justify-content: flex-end;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
 .navbar a {
   color: var(--text-soft);
-  font-size: 0.94rem;
+  font-size: 0.9rem;
   font-weight: 850;
   padding: 9px 12px;
   border-radius: 999px;
+  white-space: nowrap;
 }
 
 .navbar a:hover {
@@ -184,7 +196,8 @@ p {
   padding: 11px 18px;
 }
 
-.navbar a[href="/posts/saved"] {
+.navbar a[href="/posts/saved"],
+.navbar a[href="/saved"] {
   color: #e9d5ff;
   background: rgba(124, 58, 237, 0.16);
   border: 1px solid rgba(168, 85, 247, 0.28);
@@ -203,7 +216,11 @@ p {
 }
 
 .main,
-.main-content {
+.main-content,
+.posts-feed,
+.users-main,
+.profile-main,
+.post-main {
   min-width: 0;
 }
 
@@ -374,14 +391,28 @@ button:hover,
 .primary-btn,
 .like-btn,
 .save-btn,
-.follow-btn {
+.follow-btn,
+.read-more-btn,
+.side-action-btn,
+.create-post-mini,
+.users-primary-link,
+.user-action-btn,
+.profile-action-btn,
+.profile-secondary-btn,
+.profile-side-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 12px 18px;
   line-height: 1;
   text-align: center;
+}
+
+.primary-btn,
+.like-btn,
+.save-btn,
+.follow-btn {
+  padding: 12px 18px;
 }
 
 .save-btn {
@@ -402,7 +433,10 @@ button:hover,
 
 .follow-btn.is-following,
 .follow-btn.following,
-.primary-btn.is-following {
+.primary-btn.is-following,
+.profile-action-btn.is-following,
+.profile-side-btn.is-following,
+.user-action-btn.is-following {
   background: linear-gradient(135deg, var(--green), #16a34a);
   box-shadow: var(--green-glow);
 }
@@ -488,12 +522,6 @@ button:hover,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: auto !important;
-  height: auto !important;
-  min-width: 0 !important;
-  min-height: 0 !important;
-  max-width: none !important;
-  max-height: none !important;
   padding: 8px 12px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.06);
@@ -858,10 +886,6 @@ button:hover,
   font-weight: 700;
 }
 
-.posts-feed {
-  min-width: 0;
-}
-
 .feed-header {
   display: grid;
   grid-template-columns: auto minmax(300px, 1fr);
@@ -1019,9 +1043,6 @@ button:hover,
 .profile-action-btn,
 .profile-secondary-btn,
 .profile-side-btn {
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
   width: fit-content;
   padding: 10px 14px;
   font-size: 0.9rem;
@@ -1107,11 +1128,6 @@ button:hover,
   grid-template-columns: minmax(0, 1fr) 370px;
   gap: 26px;
   align-items: start;
-}
-
-.post-main,
-.premium-main {
-  min-width: 0;
 }
 
 .ui-card,
@@ -1222,10 +1238,6 @@ button:hover,
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-}
-
-.owner-actions form {
-  margin: 0;
 }
 
 .post-like-row,
@@ -1498,11 +1510,6 @@ button:hover,
   gap: 8px;
 }
 
-.comment-actions form,
-.premium-comment-actions form {
-  margin: 0;
-}
-
 .comment-action-btn {
   padding: 8px 11px;
   color: #e2e8f0;
@@ -1544,7 +1551,7 @@ button:hover,
 
 
 /* =========================================================
-   11. USERS PAGE
+   11. USERS / FOLLOWERS / FOLLOWING PAGES
 ========================================================= */
 .users-page {
   width: var(--container);
@@ -1647,11 +1654,6 @@ button:hover,
   grid-template-columns: minmax(0, 1fr) 340px;
   gap: 26px;
   align-items: start;
-}
-
-.users-main,
-.users-sidebar {
-  min-width: 0;
 }
 
 .users-section-head {
@@ -1972,6 +1974,11 @@ button:hover,
   margin-bottom: 18px;
 }
 
+.profile-login-actions form {
+  display: inline-flex;
+  width: fit-content;
+}
+
 .profile-secondary-btn {
   color: #fff;
   background: rgba(15, 23, 42, 0.85);
@@ -2021,11 +2028,6 @@ button:hover,
   align-items: start;
 }
 
-.profile-main,
-.profile-sidebar {
-  min-width: 0;
-}
-
 .profile-card {
   padding: 24px;
 }
@@ -2060,10 +2062,19 @@ button:hover,
 
 .profile-info-box,
 .profile-mini-stat {
+  display: block;
   padding: 16px;
   border-radius: 16px;
   background: rgba(7, 16, 33, 0.72);
   border: 1px solid rgba(148, 163, 184, 0.12);
+  transition: 0.2s ease;
+}
+
+a.profile-info-box:hover,
+a.profile-mini-stat:hover {
+  transform: translateY(-3px);
+  border-color: rgba(168, 85, 247, 0.42);
+  background: rgba(15, 23, 42, 0.92);
 }
 
 .profile-info-box span,
@@ -2166,10 +2177,17 @@ button:hover,
 .profile-stat-row {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 14px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border-soft);
   color: var(--muted);
+  transition: 0.2s ease;
+}
+
+a.profile-stat-row:hover {
+  color: #fff;
+  transform: translateX(4px);
 }
 
 .profile-stat-row:last-child {
@@ -2262,7 +2280,7 @@ button:hover,
 .profile-badge {
   display: inline-flex;
   width: fit-content;
-  margin-top: 10px;
+  margin: 10px 0 16px;
   padding: 8px 12px;
   border-radius: 999px;
   color: #e9d5ff;
@@ -2270,6 +2288,10 @@ button:hover,
   border: 1px solid rgba(168, 85, 247, 0.3);
   font-size: 0.82rem;
   font-weight: 900;
+}
+
+.profile-sidebar form {
+  margin-top: 12px;
 }
 
 
@@ -2515,7 +2537,7 @@ body > h3 + p + a {
 
   .navbar div:last-child {
     width: 100%;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 10px;
   }
 
@@ -2572,6 +2594,7 @@ body > h3 + p + a {
     flex-direction: column;
   }
 
+  .profile-login-actions form,
   .profile-action-btn,
   .profile-secondary-btn,
   .profile-side-btn,
@@ -2702,7 +2725,11 @@ body > h3 + p + a {
   }
 
   .comment-form-actions .primary-btn,
-  .side-rate-form .primary-btn {
+  .side-rate-form .primary-btn,
+  .user-card-actions,
+  .user-card-actions a,
+  .user-card-actions form,
+  .user-card-actions button {
     width: 100%;
   }
 

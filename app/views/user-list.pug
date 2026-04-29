@@ -1,0 +1,69 @@
+extends layout
+
+block content
+  .users-page
+    .users-hero-panel
+      .users-hero-glow
+      .users-hero-content
+        span.users-eyebrow Gaming Community
+        h1= heading
+        p= subheading
+
+        .profile-login-actions
+          a.profile-secondary-btn(href=`/users/${profileUser.id}`) Back to Profile
+          a.profile-secondary-btn(href=`/users/${profileUser.id}/followers`) Followers
+          a.profile-secondary-btn(href=`/users/${profileUser.id}/following`) Following
+
+    if !users || users.length === 0
+      .users-empty-card
+        h2= emptyMessage
+        p This list will update when users start following each other.
+    else
+      .users-grid
+        each listUser in users
+          - const initial = listUser.username ? listUser.username.charAt(0).toUpperCase() : 'U'
+
+          .user-card
+            .user-card-top
+              if listUser.avatar_url
+                img.user-avatar-photo(src=listUser.avatar_url, alt=listUser.username)
+              else
+                .user-avatar= initial
+
+              span.user-rank-badge #{listUser.follower_count || 0} followers
+
+            .user-card-body
+              h3= listUser.username
+              if listUser.bio
+                p= listUser.bio
+              else
+                p Gaming community member
+
+              .user-card-stats
+                .user-mini-stat
+                  strong= listUser.post_count || 0
+                  span Posts
+
+                .user-mini-stat
+                  strong= listUser.total_likes || 0
+                  span Likes
+
+              .user-mini-details
+                if listUser.favorite_game
+                  span 🎮 #{listUser.favorite_game}
+                if listUser.location
+                  span 📍 #{listUser.location}
+
+              .user-card-actions
+                a.user-action-btn.secondary(href=`/users/${listUser.id}`) View Profile
+
+                if currentUser && currentUser.id !== listUser.id
+                  form(action=`/users/${listUser.id}/follow`, method="POST")
+                    input(type="hidden", name="redirect", value=originalUrl || `/users/${profileUser.id}`)
+                    button.user-action-btn(type="submit")
+                      if listUser.is_following
+                        | ✓ Following
+                      else
+                        | + Follow
+                else if !currentUser
+                  a.user-action-btn(href="/login") Login to Follow

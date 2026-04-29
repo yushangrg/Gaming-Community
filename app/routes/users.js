@@ -8,7 +8,10 @@ const router = express.Router();
 ========================================================= */
 router.get('/', async (req, res) => {
     try {
-        const [users] = await db.query(`
+        const currentUserId = req.session.user ? Number(req.session.user.id) : 0;
+
+        const [users] = await db.query(
+            `
             SELECT 
                 users.id,
                 users.username,
@@ -23,7 +26,14 @@ router.get('/', async (req, res) => {
                 COALESCE(SUM(posts.views), 0) AS total_views,
 
                 COALESCE(follower_counts.total_followers, 0) AS follower_count,
-                COALESCE(following_counts.total_following, 0) AS following_count
+                COALESCE(following_counts.total_following, 0) AS following_count,
+
+                EXISTS (
+                    SELECT 1
+                    FROM user_follows AS viewer_follow
+                    WHERE viewer_follow.follower_id = ?
+                    AND viewer_follow.following_id = users.id
+                ) AS is_following
 
             FROM users
 
@@ -53,17 +63,21 @@ router.get('/', async (req, res) => {
                 following_counts.total_following
 
             ORDER BY post_count DESC, users.username ASC
-        `);
+            `,
+            [currentUserId]
+        );
 
         const formattedUsers = users.map(user => ({
             ...user,
             posts_count: user.post_count,
             followers_count: user.follower_count,
             following_count: user.following_count,
+            isFollowing: Boolean(user.is_following),
             points: (Number(user.post_count) * 25) + (Number(user.total_likes) * 5)
         }));
 
         const totalMembers = formattedUsers.length;
+
         const totalPosts = formattedUsers.reduce(
             (sum, user) => sum + Number(user.post_count || 0),
             0
@@ -158,6 +172,232 @@ router.post('/:id/follow', async (req, res) => {
 });
 
 /* =========================================================
+   USER FOLLOWERS PAGE
+========================================================= */
+router.get('/:id/followers', async (req, res) => {
+    try {
+        const profileUserId = Number(req.params.id);
+        const currentUserId = req.session.user ? Number(req.session.user.id) : 0;
+
+        const [profileRows] = await db.query(
+            `
+            SELECT id, username
+            FROM users
+            WHERE id = ?
+            `,
+            [profileUserId]
+        );
+
+        if (!profileRows.length) {
+            return res.status(404).send('User not found');
+        }
+
+        const profileUser = profileRows[0];
+
+        const [users] = await db.query(
+            `
+            SELECT 
+                users.id,
+                users.username,
+                users.avatar_url,
+                users.bio,
+                users.location,
+                users.favorite_game,
+                users.website,
+
+                COUNT(DISTINCT posts.id) AS post_count,
+                COALESCE(SUM(posts.likes), 0) AS total_likes,
+                COALESCE(SUM(posts.views), 0) AS total_views,
+
+                COALESCE(follower_counts.total_followers, 0) AS follower_count,
+                COALESCE(following_counts.total_following, 0) AS following_count,
+
+                EXISTS (
+                    SELECT 1
+                    FROM user_follows AS viewer_follow
+                    WHERE viewer_follow.follower_id = ?
+                    AND viewer_follow.following_id = users.id
+                ) AS is_following
+
+            FROM user_follows AS main_follow
+
+            JOIN users ON main_follow.follower_id = users.id
+
+            LEFT JOIN posts ON posts.user_id = users.id
+
+            LEFT JOIN (
+                SELECT following_id, COUNT(*) AS total_followers
+                FROM user_follows
+                GROUP BY following_id
+            ) AS follower_counts ON follower_counts.following_id = users.id
+
+            LEFT JOIN (
+                SELECT follower_id, COUNT(*) AS total_following
+                FROM user_follows
+                GROUP BY follower_id
+            ) AS following_counts ON following_counts.follower_id = users.id
+
+            WHERE main_follow.following_id = ?
+
+            GROUP BY
+                users.id,
+                users.username,
+                users.avatar_url,
+                users.bio,
+                users.location,
+                users.favorite_game,
+                users.website,
+                follower_counts.total_followers,
+                following_counts.total_following,
+                main_follow.created_at
+
+            ORDER BY main_follow.created_at DESC
+            `,
+            [currentUserId, profileUserId]
+        );
+
+        const formattedUsers = users.map(user => ({
+            ...user,
+            posts_count: user.post_count,
+            followers_count: user.follower_count,
+            following_count: user.following_count,
+            isFollowing: Boolean(user.is_following),
+            points: (Number(user.post_count) * 25) + (Number(user.total_likes) * 5)
+        }));
+
+        res.render('user-list', {
+            pageTitle: `${profileUser.username}'s Followers`,
+            heading: 'Followers',
+            subheading: `People following ${profileUser.username}`,
+            profileUser,
+            users: formattedUsers,
+            emptyMessage: 'No followers yet.',
+            backUrl: `/users/${profileUser.id}`,
+            currentListUrl: `/users/${profileUser.id}/followers`,
+            user: req.session.user || null,
+            currentUser: req.session.user || null
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+});
+
+/* =========================================================
+   USER FOLLOWING PAGE
+========================================================= */
+router.get('/:id/following', async (req, res) => {
+    try {
+        const profileUserId = Number(req.params.id);
+        const currentUserId = req.session.user ? Number(req.session.user.id) : 0;
+
+        const [profileRows] = await db.query(
+            `
+            SELECT id, username
+            FROM users
+            WHERE id = ?
+            `,
+            [profileUserId]
+        );
+
+        if (!profileRows.length) {
+            return res.status(404).send('User not found');
+        }
+
+        const profileUser = profileRows[0];
+
+        const [users] = await db.query(
+            `
+            SELECT 
+                users.id,
+                users.username,
+                users.avatar_url,
+                users.bio,
+                users.location,
+                users.favorite_game,
+                users.website,
+
+                COUNT(DISTINCT posts.id) AS post_count,
+                COALESCE(SUM(posts.likes), 0) AS total_likes,
+                COALESCE(SUM(posts.views), 0) AS total_views,
+
+                COALESCE(follower_counts.total_followers, 0) AS follower_count,
+                COALESCE(following_counts.total_following, 0) AS following_count,
+
+                EXISTS (
+                    SELECT 1
+                    FROM user_follows AS viewer_follow
+                    WHERE viewer_follow.follower_id = ?
+                    AND viewer_follow.following_id = users.id
+                ) AS is_following
+
+            FROM user_follows AS main_follow
+
+            JOIN users ON main_follow.following_id = users.id
+
+            LEFT JOIN posts ON posts.user_id = users.id
+
+            LEFT JOIN (
+                SELECT following_id, COUNT(*) AS total_followers
+                FROM user_follows
+                GROUP BY following_id
+            ) AS follower_counts ON follower_counts.following_id = users.id
+
+            LEFT JOIN (
+                SELECT follower_id, COUNT(*) AS total_following
+                FROM user_follows
+                GROUP BY follower_id
+            ) AS following_counts ON following_counts.follower_id = users.id
+
+            WHERE main_follow.follower_id = ?
+
+            GROUP BY
+                users.id,
+                users.username,
+                users.avatar_url,
+                users.bio,
+                users.location,
+                users.favorite_game,
+                users.website,
+                follower_counts.total_followers,
+                following_counts.total_following,
+                main_follow.created_at
+
+            ORDER BY main_follow.created_at DESC
+            `,
+            [currentUserId, profileUserId]
+        );
+
+        const formattedUsers = users.map(user => ({
+            ...user,
+            posts_count: user.post_count,
+            followers_count: user.follower_count,
+            following_count: user.following_count,
+            isFollowing: Boolean(user.is_following),
+            points: (Number(user.post_count) * 25) + (Number(user.total_likes) * 5)
+        }));
+
+        res.render('user-list', {
+            pageTitle: `${profileUser.username}'s Following`,
+            heading: 'Following',
+            subheading: `People ${profileUser.username} follows`,
+            profileUser,
+            users: formattedUsers,
+            emptyMessage: 'Not following anyone yet.',
+            backUrl: `/users/${profileUser.id}`,
+            currentListUrl: `/users/${profileUser.id}/following`,
+            user: req.session.user || null,
+            currentUser: req.session.user || null
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+});
+
+/* =========================================================
    PUBLIC USER PROFILE PAGE
 ========================================================= */
 router.get('/:id', async (req, res) => {
@@ -212,6 +452,7 @@ router.get('/:id', async (req, res) => {
         const profileUser = users[0];
 
         profileUser.followers_count = profileUser.follower_count;
+        profileUser.following_count = profileUser.following_count;
         profileUser.isFollowing = Boolean(profileUser.is_following);
         profileUser.isOwnProfile = currentUserId === Number(profileUser.id);
 

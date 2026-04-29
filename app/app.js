@@ -37,6 +37,7 @@ app.use(session({
 ========================================================= */
 app.use((req, res, next) => {
     res.locals.user = req.session.user || null;
+    res.locals.currentUser = req.session.user || null;
     next();
 });
 
@@ -64,6 +65,13 @@ app.get('/support', (req, res) => {
 });
 
 /* =========================================================
+   QUICK SAVED POSTS REDIRECT
+========================================================= */
+app.get('/saved', (req, res) => {
+    res.redirect('/posts/saved');
+});
+
+/* =========================================================
    PROFILE PAGE
 ========================================================= */
 app.get('/profile', async (req, res) => {
@@ -71,12 +79,16 @@ app.get('/profile', async (req, res) => {
         if (!req.session.user) {
             return res.render('profile', {
                 user: null,
+                currentUser: null,
                 posts: [],
                 stats: {
                     postCount: 0,
                     points: 0,
                     totalViews: 0,
-                    totalLikes: 0
+                    totalLikes: 0,
+                    followerCount: 0,
+                    followingCount: 0,
+                    savedCount: 0
                 }
             });
         }
@@ -86,16 +98,33 @@ app.get('/profile', async (req, res) => {
         const [users] = await db.query(
             `
             SELECT 
-                id,
-                username,
-                email,
-                avatar_url,
-                bio,
-                location,
-                favorite_game,
-                website
+                users.id,
+                users.username,
+                users.email,
+                users.avatar_url,
+                users.bio,
+                users.location,
+                users.favorite_game,
+                users.website,
+
+                COALESCE(follower_counts.total_followers, 0) AS follower_count,
+                COALESCE(following_counts.total_following, 0) AS following_count
+
             FROM users
-            WHERE id = ?
+
+            LEFT JOIN (
+                SELECT following_id, COUNT(*) AS total_followers
+                FROM user_follows
+                GROUP BY following_id
+            ) AS follower_counts ON follower_counts.following_id = users.id
+
+            LEFT JOIN (
+                SELECT follower_id, COUNT(*) AS total_following
+                FROM user_follows
+                GROUP BY follower_id
+            ) AS following_counts ON following_counts.follower_id = users.id
+
+            WHERE users.id = ?
             `,
             [userId]
         );
@@ -104,31 +133,58 @@ app.get('/profile', async (req, res) => {
             req.session.destroy(() => {});
             return res.render('profile', {
                 user: null,
+                currentUser: null,
                 posts: [],
                 stats: {
                     postCount: 0,
                     points: 0,
                     totalViews: 0,
-                    totalLikes: 0
+                    totalLikes: 0,
+                    followerCount: 0,
+                    followingCount: 0,
+                    savedCount: 0
                 }
             });
         }
+
+        const profileUser = users[0];
 
         const [posts] = await db.query(
             `
             SELECT 
                 posts.*,
-                COALESCE(comment_counts.total_comments, 0) AS comment_count
+
+                COALESCE(comment_counts.total_comments, 0) AS comment_count,
+                COALESCE(comment_counts.total_comments, 0) AS comments_count,
+                COALESCE(comment_counts.total_comments, 0) AS total_comments,
+
+                COALESCE(save_counts.total_saves, 0) AS save_count,
+
+                EXISTS (
+                    SELECT 1
+                    FROM saved_posts
+                    WHERE saved_posts.post_id = posts.id
+                    AND saved_posts.user_id = ?
+                ) AS is_saved
+
             FROM posts
+
             LEFT JOIN (
                 SELECT post_id, COUNT(*) AS total_comments
                 FROM comments
                 GROUP BY post_id
             ) AS comment_counts ON comment_counts.post_id = posts.id
+
+            LEFT JOIN (
+                SELECT post_id, COUNT(*) AS total_saves
+                FROM saved_posts
+                GROUP BY post_id
+            ) AS save_counts ON save_counts.post_id = posts.id
+
             WHERE posts.user_id = ?
             ORDER BY posts.id DESC
             `,
-            [userId]
+            [userId, userId]
         );
 
         const [statsRows] = await db.query(
@@ -143,19 +199,35 @@ app.get('/profile', async (req, res) => {
             [userId]
         );
 
-        const postCount = statsRows[0].postCount || 0;
-        const totalLikes = statsRows[0].totalLikes || 0;
-        const totalViews = statsRows[0].totalViews || 0;
+        const [savedRows] = await db.query(
+            `
+            SELECT COUNT(*) AS savedCount
+            FROM saved_posts
+            WHERE user_id = ?
+            `,
+            [userId]
+        );
+
+        const postCount = Number(statsRows[0].postCount || 0);
+        const totalLikes = Number(statsRows[0].totalLikes || 0);
+        const totalViews = Number(statsRows[0].totalViews || 0);
+        const followerCount = Number(profileUser.follower_count || 0);
+        const followingCount = Number(profileUser.following_count || 0);
+        const savedCount = Number(savedRows[0].savedCount || 0);
 
         const stats = {
             postCount,
             totalLikes,
             totalViews,
+            followerCount,
+            followingCount,
+            savedCount,
             points: (postCount * 25) + (totalLikes * 5)
         };
 
         res.render('profile', {
-            user: users[0],
+            user: profileUser,
+            currentUser: req.session.user || null,
             posts,
             stats
         });

@@ -2,20 +2,28 @@ extends layout
 
 block content
   - const viewedUser = typeof profileUser !== 'undefined' && profileUser ? profileUser : (typeof viewedUserData !== 'undefined' && viewedUserData ? viewedUserData : null)
+  - const viewer = (typeof currentUser !== 'undefined' && currentUser) ? currentUser : (typeof user !== 'undefined' && user ? user : null)
   - const safePosts = typeof posts !== 'undefined' && posts ? posts : []
   - const safeStats = typeof stats !== 'undefined' && stats ? stats : {}
+
   - const username = viewedUser ? (viewedUser.username || viewedUser.name || 'Unknown User') : 'Unknown User'
   - const initial = username.charAt(0).toUpperCase()
-  - const avatar = viewedUser && viewedUser.avatar ? viewedUser.avatar : (viewedUser && viewedUser.photo ? viewedUser.photo : (viewedUser && viewedUser.profile_photo ? viewedUser.profile_photo : null))
+  - const avatar = viewedUser ? (viewedUser.avatar_url || viewedUser.avatar || viewedUser.photo || viewedUser.profile_photo || null) : null
   - const bio = viewedUser && viewedUser.bio ? viewedUser.bio : 'This member has not added a bio yet.'
   - const location = viewedUser && viewedUser.location ? viewedUser.location : 'Not added'
   - const website = viewedUser && viewedUser.website ? viewedUser.website : ''
   - const favoriteGame = viewedUser && viewedUser.favorite_game ? viewedUser.favorite_game : 'Not added'
   - const platform = viewedUser && viewedUser.platform ? viewedUser.platform : 'Not added'
-  - const totalPosts = Number(safeStats.total_posts || viewedUser && viewedUser.post_count || safePosts.length || 0)
-  - const totalLikes = Number(safeStats.total_likes || viewedUser && viewedUser.total_likes || 0)
-  - const totalComments = Number(safeStats.total_comments || viewedUser && viewedUser.total_comments || 0)
-  - const totalViews = Number(safeStats.total_views || viewedUser && viewedUser.total_views || 0)
+
+  - const totalPosts = Number(safeStats.postCount || safeStats.total_posts || viewedUser && viewedUser.post_count || safePosts.length || 0)
+  - const totalLikes = Number(safeStats.totalLikes || safeStats.total_likes || viewedUser && viewedUser.total_likes || 0)
+  - const totalViews = Number(safeStats.totalViews || safeStats.total_views || viewedUser && viewedUser.total_views || 0)
+  - const totalComments = Number(safeStats.totalComments || safeStats.total_comments || safePosts.reduce((sum, post) => sum + Number(post.comment_count || post.comments_count || post.total_comments || 0), 0))
+  - const followerCount = Number(safeStats.followerCount || viewedUser && (viewedUser.follower_count || viewedUser.followers_count) || 0)
+  - const followingCount = Number(safeStats.followingCount || viewedUser && viewedUser.following_count || 0)
+  - const points = Number(safeStats.points || ((totalPosts * 25) + (totalLikes * 5)))
+  - const isOwnProfile = viewedUser && viewer && Number(viewer.id) === Number(viewedUser.id)
+  - const isFollowing = viewedUser && (viewedUser.isFollowing || viewedUser.is_following)
 
   .profile-page
     if !viewedUser
@@ -43,8 +51,23 @@ block content
           p= bio
 
           .profile-login-actions
-            a.profile-action-btn(href=`/posts?userId=${viewedUser.id}`) View Posts
+            a.profile-action-btn(href=`/posts?user=${viewedUser.id}`) View Posts
+            a.profile-secondary-btn(href=`/users/${viewedUser.id}/followers`) Followers
+            a.profile-secondary-btn(href=`/users/${viewedUser.id}/following`) Following
             a.profile-secondary-btn(href="/users") Back to Users
+
+            if isOwnProfile
+              a.profile-action-btn(href="/posts/saved") 💾 My Saved Posts
+            else if viewer
+              form(action=`/users/${viewedUser.id}/follow`, method="POST")
+                input(type="hidden", name="redirect", value=`/users/${viewedUser.id}`)
+                button.profile-action-btn(type="submit")
+                  if isFollowing
+                    | ✓ Following
+                  else
+                    | + Follow
+            else
+              a.profile-action-btn(href="/login") Login to Follow
 
       .profile-layout
         main.profile-main
@@ -71,6 +94,14 @@ block content
                 span Platform
                 strong= platform
 
+              a.profile-info-box(href=`/users/${viewedUser.id}/followers`)
+                span Followers
+                strong= followerCount
+
+              a.profile-info-box(href=`/users/${viewedUser.id}/following`)
+                span Following
+                strong= followingCount
+
               if website
                 .profile-info-box
                   span Website
@@ -86,7 +117,7 @@ block content
                 h2 Posts by #{username}
                 p.profile-muted Latest posts shared by this community member.
 
-              a.profile-side-btn(href=`/posts?userId=${viewedUser.id}`) View All
+              a.profile-side-btn(href=`/posts?user=${viewedUser.id}`) View All
 
             if safePosts.length === 0
               p.profile-muted This user has not shared any posts yet.
@@ -96,11 +127,12 @@ block content
                   - const postComments = Number(post.comment_count || post.comments_count || post.total_comments || 0)
                   - const postViews = Number(post.views || 0)
                   - const postLikes = Number(post.likes || 0)
+                  - const postSaves = Number(post.save_count || 0)
 
                   a.profile-post-item(href=`/posts/${post.id}`)
                     .profile-post-content
                       strong= post.title
-                      span #{post.category || 'Gaming'} · #{postLikes} likes · #{postComments} comments · #{postViews} views
+                      span #{post.category || 'Gaming'} · #{postLikes} likes · #{postSaves} saves · #{postComments} comments · #{postViews} views
                     .profile-post-arrow →
 
         aside.profile-sidebar
@@ -113,7 +145,22 @@ block content
             h3= username
             p.profile-muted= bio
 
-            .profile-badge Public Profile
+            if isOwnProfile
+              .profile-badge Your Public Profile
+            else
+              .profile-badge Public Profile
+
+            if !isOwnProfile
+              if viewer
+                form(action=`/users/${viewedUser.id}/follow`, method="POST")
+                  input(type="hidden", name="redirect", value=`/users/${viewedUser.id}`)
+                  button.profile-side-btn(type="submit")
+                    if isFollowing
+                      | ✓ Following
+                    else
+                      | + Follow User
+              else
+                a.profile-side-btn(href="/login") Login to Follow
 
           .profile-card
             h3 Community Stats
@@ -134,6 +181,27 @@ block content
               .profile-stat-row
                 span Views
                 strong= totalViews
+
+              .profile-stat-row
+                span Points
+                strong= points
+
+          .profile-card
+            h3 Network
+
+            .profile-stat-list
+              a.profile-stat-row(href=`/users/${viewedUser.id}/followers`)
+                span Followers
+                strong= followerCount
+
+              a.profile-stat-row(href=`/users/${viewedUser.id}/following`)
+                span Following
+                strong= followingCount
+
+              if isOwnProfile
+                a.profile-stat-row(href="/posts/saved")
+                  span Saved Posts
+                  strong 💾
 
           .profile-card
             h3 Gaming Details
