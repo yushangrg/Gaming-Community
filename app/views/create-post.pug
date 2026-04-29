@@ -1,67 +1,111 @@
 extends layout
 
 block content
+  -
+    const typeCards = [
+      {
+        value: 'Guide',
+        label: 'Guide',
+        description: 'Step-by-step tutorial'
+      },
+      {
+        value: 'Tip',
+        label: 'Tip',
+        description: 'Quick useful advice'
+      },
+      {
+        value: 'Trick',
+        label: 'Trick',
+        description: 'Hidden method or shortcut'
+      },
+      {
+        value: 'Review',
+        label: 'Review',
+        description: 'Your opinion about a game'
+      },
+      {
+        value: 'News',
+        label: 'News',
+        description: 'Game update or announcement'
+      },
+      {
+        value: 'Question',
+        label: 'Question',
+        description: 'Ask the community for help'
+      },
+      {
+        value: 'Discussion',
+        label: 'Discussion',
+        description: 'Start a community conversation'
+      },
+      {
+        value: 'Video',
+        label: 'Video',
+        description: 'Share a YouTube video post'
+      }
+    ]
+
+    const difficultyOptions = typeof difficulties !== 'undefined' && difficulties
+      ? difficulties
+      : ['Beginner', 'Intermediate', 'Advanced', 'Pro']
+
   .profile-page
     .profile-card
       .profile-card-head
         div
           h2 ✍️ Create New Post
-          p.profile-muted Share a gaming guide, tip, trick, review, question, or discussion.
+          p.profile-muted Write a thought, start a discussion, ask a question, or share a guide, image, or video.
 
       form.profile-edit-form(action="/posts/create", method="POST", enctype="multipart/form-data")
         .profile-form-grid
           .form-group.full
-            label(for="title") Title
+            label(for="title") Title optional
             input(
               type="text"
               id="title"
               name="title"
-              placeholder="Example: Best GTA V money tricks"
-              required
+              placeholder="Optional. Example: Best GTA V money tricks"
             )
+            small Leave empty if you just want to post a quick thought.
 
           .form-group
-            label(for="category") Game / Category
+            label(for="category") Game / Category optional
             input(
               type="text"
               id="category"
               name="category"
-              placeholder="Example: GTA V, Valorant, Minecraft"
-              required
+              placeholder="Optional. Example: GTA V, Valorant, Minecraft"
             )
+            small Leave empty for General.
 
           .form-group
-            label(for="post_type") Post Type
-            select(id="post_type", name="post_type", required)
-              option(value="Guide") Guide
-              option(value="Tip") Tip
-              option(value="Trick") Trick
-              option(value="Review") Review
-              option(value="News") News
-              option(value="Question") Question
-              option(value="Discussion") Discussion
-              option(value="Video") Video
+            label(for="difficulty") Difficulty optional
+            select(id="difficulty", name="difficulty")
+              each item in difficultyOptions
+                option(value=item)= item
 
           .form-group
-            label(for="difficulty") Difficulty
-            select(id="difficulty", name="difficulty", required)
-              option(value="Beginner") Beginner
-              option(value="Intermediate") Intermediate
-              option(value="Advanced") Advanced
-              option(value="Pro") Pro
-
-          .form-group
-            label(for="image") Upload Image
+            label(for="image") Upload Image optional
             input(
               type="file"
               id="image"
               name="image"
               accept="image/jpeg,image/png,image/webp,image/gif"
             )
-            small Max size: 5MB.
+            small Optional. Max size: 5MB.
+
+          .form-group
+            label(for="video") YouTube Video URL optional
+            input(
+              type="url"
+              id="video"
+              name="video"
+              placeholder="https://www.youtube.com/watch?v=VIDEO_ID"
+            )
+            small Optional unless you choose the Video post type.
 
           .form-group.full
-            label(for="image_url") Or Image URL
+            label(for="image_url") Or Image URL optional
             input(
               type="url"
               id="image_url"
@@ -71,23 +115,117 @@ block content
             small If you upload an image and also add a URL, the uploaded image will be used.
 
           .form-group.full
-            label(for="video") YouTube Video URL
-            input(
-              type="url"
-              id="video"
-              name="video"
-              placeholder="https://www.youtube.com/watch?v=VIDEO_ID"
-            )
-
-          .form-group.full
-            label(for="content") Content
+            label(for="content" id="content_label") What do you want to share?
             textarea(
               id="content"
               name="content"
-              rows="8"
-              placeholder="Write your guide, tip, trick, review, or question..."
+              rows="9"
+              placeholder="Write a thought, discussion, question, guide, review, or update..."
               required
             )
 
+        .create-post-type-section
+          h3 What type of post are you creating?
+          p.profile-muted Pick the best post type so other users can filter and find your content easily.
+
+          .post-type-choice-grid
+            each item in typeCards
+              label.post-type-choice(for=`post-type-${item.value}`)
+                input.post-type-radio(
+                  type="radio"
+                  id=`post-type-${item.value}`
+                  name="post_type"
+                  value=item.value
+                  checked=item.value === 'Discussion'
+                )
+
+                .post-type-choice-card
+                  span= item.label
+                  strong= item.description
+
         .profile-form-actions
           button.profile-action-btn(type="submit") 🚀 Publish Post
+
+  script.
+    const postTypeRadios = document.querySelectorAll('input[name="post_type"]');
+    const postTypeChoices = document.querySelectorAll('.post-type-choice');
+    const contentLabel = document.getElementById('content_label');
+    const contentTextarea = document.getElementById('content');
+    const videoInput = document.getElementById('video');
+
+    const postTypeData = {
+      Guide: {
+        label: 'Guide Content',
+        placeholder: 'Write your step-by-step guide. Explain the setup, strategy, mistakes to avoid, and final tips...'
+      },
+      Tip: {
+        label: 'Tip Content',
+        placeholder: 'Share a quick useful gaming tip. Keep it clear and helpful...'
+      },
+      Trick: {
+        label: 'Trick Content',
+        placeholder: 'Explain the trick, how to do it, when to use it, and why it works...'
+      },
+      Review: {
+        label: 'Review Content',
+        placeholder: 'Write your review. Talk about gameplay, graphics, story, pros, cons, and your final opinion...'
+      },
+      News: {
+        label: 'News Content',
+        placeholder: 'Share the news update. What happened? Which game is affected? Why does it matter?'
+      },
+      Question: {
+        label: 'Question Details',
+        placeholder: 'Ask your question clearly. Mention the game, problem, what you tried, and what help you need...'
+      },
+      Discussion: {
+        label: 'Discussion Topic',
+        placeholder: 'Start a discussion, share your thoughts, or post something like Facebook/Twitter...'
+      },
+      Video: {
+        label: 'Video Description',
+        placeholder: 'Describe your video. What is it about? What should viewers learn or watch for?'
+      }
+    };
+
+    function updateCreatePostText() {
+      const selectedRadio = document.querySelector('input[name="post_type"]:checked');
+      const selectedType = selectedRadio ? selectedRadio.value : 'Discussion';
+      const data = postTypeData[selectedType] || postTypeData.Discussion;
+
+      contentLabel.textContent = data.label;
+      contentTextarea.placeholder = data.placeholder;
+
+      if (selectedType === 'Video') {
+        videoInput.required = true;
+      } else {
+        videoInput.required = false;
+      }
+
+      postTypeChoices.forEach(choice => {
+        const radio = choice.querySelector('input[name="post_type"]');
+
+        if (radio && radio.checked) {
+          choice.classList.add('active');
+        } else {
+          choice.classList.remove('active');
+        }
+      });
+    }
+
+    postTypeChoices.forEach(choice => {
+      choice.addEventListener('click', () => {
+        const radio = choice.querySelector('input[name="post_type"]');
+
+        if (radio) {
+          radio.checked = true;
+          updateCreatePostText();
+        }
+      });
+    });
+
+    postTypeRadios.forEach(radio => {
+      radio.addEventListener('change', updateCreatePostText);
+    });
+
+    updateCreatePostText();

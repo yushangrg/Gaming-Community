@@ -29,7 +29,7 @@ const ALLOWED_DIFFICULTIES = [
 ];
 
 function normalizePostType(postType) {
-    return ALLOWED_POST_TYPES.includes(postType) ? postType : 'Guide';
+    return ALLOWED_POST_TYPES.includes(postType) ? postType : 'Discussion';
 }
 
 function normalizeDifficulty(difficulty) {
@@ -43,6 +43,42 @@ function calculateReadTime(content) {
 
     const words = content.trim().split(/\s+/).filter(Boolean).length;
     return Math.max(1, Math.ceil(words / 200));
+}
+
+function createAutoTitle(content) {
+    const cleanContent = content.trim();
+
+    if (cleanContent.length <= 70) {
+        return cleanContent;
+    }
+
+    return `${cleanContent.substring(0, 70).trim()}...`;
+}
+
+/* =========================================================
+   SAFE NOTIFICATION HELPER
+   Prevents users from getting notifications for their own actions
+========================================================= */
+async function safeCreateNotification({ userId, actorId, type, message, link }) {
+    try {
+        if (!userId || !actorId) {
+            return;
+        }
+
+        if (Number(userId) === Number(actorId)) {
+            return;
+        }
+
+        await createNotification({
+            userId,
+            actorId,
+            type,
+            message,
+            link
+        });
+    } catch (err) {
+        console.error('CREATE NOTIFICATION ERROR:', err);
+    }
 }
 
 /* =========================================================
@@ -315,6 +351,7 @@ router.get('/', async (req, res) => {
                     OR posts.difficulty LIKE ?
                 )
             `;
+
             params.push(
                 `%${search}%`,
                 `%${search}%`,
@@ -476,6 +513,8 @@ router.get('/create', async (req, res) => {
 
 /* =========================================================
    CREATE POST SUBMIT
+   Only content is required.
+   Title and category are auto-filled when empty.
 ========================================================= */
 router.post('/create', uploadSingleImage, async (req, res) => {
     try {
@@ -495,20 +534,30 @@ router.post('/create', uploadSingleImage, async (req, res) => {
 
         const userId = req.session.user.id;
 
-        if (!title || !content || !category) {
-            return res.status(400).send('Missing title, content, or category');
+        if (!content || !content.trim()) {
+            return res.status(400).send('Post content is required');
         }
+
+        const cleanContent = content.trim();
+
+        const finalTitle = title && title.trim()
+            ? title.trim()
+            : createAutoTitle(cleanContent);
+
+        const finalCategory = category && category.trim()
+            ? category.trim()
+            : 'General';
 
         const embedVideo = convertYouTubeUrlToEmbed(video);
 
         let finalPostType = normalizePostType(post_type);
 
-        if (embedVideo && (!post_type || post_type.trim() === '')) {
+        if (embedVideo && (!post_type || !post_type.trim())) {
             finalPostType = 'Video';
         }
 
         const finalDifficulty = normalizeDifficulty(difficulty);
-        const readTime = calculateReadTime(content);
+        const readTime = calculateReadTime(cleanContent);
 
         const uploadedImagePath = req.file ? `/uploads/${req.file.filename}` : null;
         const imageUrl = image_url && image_url.trim() ? image_url.trim() : null;
@@ -534,9 +583,9 @@ router.post('/create', uploadSingleImage, async (req, res) => {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0)
             `,
             [
-                title.trim(),
-                content.trim(),
-                category.trim(),
+                finalTitle,
+                cleanContent,
+                finalCategory,
                 finalPostType,
                 finalDifficulty,
                 readTime,
@@ -601,6 +650,8 @@ router.get('/:id/edit', async (req, res) => {
 
 /* =========================================================
    EDIT POST SUBMIT
+   Only content is required.
+   Title and category are auto-filled when empty.
 ========================================================= */
 router.post('/:id/edit', uploadSingleImage, async (req, res) => {
     try {
@@ -621,8 +672,8 @@ router.post('/:id/edit', uploadSingleImage, async (req, res) => {
             video
         } = req.body;
 
-        if (!title || !content || !category) {
-            return res.status(400).send('Missing title, content, or category');
+        if (!content || !content.trim()) {
+            return res.status(400).send('Post content is required');
         }
 
         const [posts] = await db.query(
@@ -644,16 +695,26 @@ router.post('/:id/edit', uploadSingleImage, async (req, res) => {
             return res.status(403).send('You can only edit your own posts');
         }
 
+        const cleanContent = content.trim();
+
+        const finalTitle = title && title.trim()
+            ? title.trim()
+            : createAutoTitle(cleanContent);
+
+        const finalCategory = category && category.trim()
+            ? category.trim()
+            : post.category || 'General';
+
         const embedVideo = convertYouTubeUrlToEmbed(video);
 
         let finalPostType = normalizePostType(post_type);
 
-        if (embedVideo && (!post_type || post_type.trim() === '')) {
+        if (embedVideo && (!post_type || !post_type.trim())) {
             finalPostType = 'Video';
         }
 
         const finalDifficulty = normalizeDifficulty(difficulty);
-        const readTime = calculateReadTime(content);
+        const readTime = calculateReadTime(cleanContent);
 
         const uploadedImagePath = req.file ? `/uploads/${req.file.filename}` : null;
         const imageUrl = image_url && image_url.trim() ? image_url.trim() : null;
@@ -678,9 +739,9 @@ router.post('/:id/edit', uploadSingleImage, async (req, res) => {
             WHERE id = ?
             `,
             [
-                title.trim(),
-                content.trim(),
-                category.trim(),
+                finalTitle,
+                cleanContent,
+                finalCategory,
                 finalPostType,
                 finalDifficulty,
                 readTime,
@@ -758,53 +819,12 @@ router.post('/:id/delete', async (req, res) => {
             );
         }
 
-        await db.query(
-            `
-            DELETE FROM comments
-            WHERE post_id = ?
-            `,
-            [postId]
-        );
-
-        await db.query(
-            `
-            DELETE FROM saved_posts
-            WHERE post_id = ?
-            `,
-            [postId]
-        );
-
-        await db.query(
-            `
-            DELETE FROM post_feedback
-            WHERE post_id = ?
-            `,
-            [postId]
-        );
-
-        await db.query(
-            `
-            DELETE FROM post_tags
-            WHERE post_id = ?
-            `,
-            [postId]
-        );
-
-        await db.query(
-            `
-            DELETE FROM notifications
-            WHERE link LIKE ?
-            `,
-            [`/posts/${postId}%`]
-        );
-
-        await db.query(
-            `
-            DELETE FROM posts
-            WHERE id = ?
-            `,
-            [postId]
-        );
+        await db.query('DELETE FROM comments WHERE post_id = ?', [postId]);
+        await db.query('DELETE FROM saved_posts WHERE post_id = ?', [postId]);
+        await db.query('DELETE FROM post_feedback WHERE post_id = ?', [postId]);
+        await db.query('DELETE FROM post_tags WHERE post_id = ?', [postId]);
+        await db.query('DELETE FROM notifications WHERE link LIKE ?', [`/posts/${postId}%`]);
+        await db.query('DELETE FROM posts WHERE id = ?', [postId]);
 
         if (post.image && post.image.startsWith('/uploads/')) {
             deleteUploadedImage(post.image);
@@ -873,7 +893,7 @@ router.post('/:id/save', async (req, res) => {
                 [userId, postId]
             );
 
-            await createNotification({
+            await safeCreateNotification({
                 userId: post.user_id,
                 actorId: userId,
                 type: 'save',
@@ -969,7 +989,7 @@ router.post('/:id/feedback', async (req, res) => {
         }
 
         if (shouldNotify) {
-            await createNotification({
+            await safeCreateNotification({
                 userId: post.user_id,
                 actorId: userId,
                 type: 'helpful',
@@ -1041,7 +1061,7 @@ router.post('/:id/follow-creator', async (req, res) => {
                 [followerId, followingId]
             );
 
-            await createNotification({
+            await safeCreateNotification({
                 userId: followingId,
                 actorId: followerId,
                 type: 'follow',
@@ -1286,7 +1306,7 @@ router.get('/:id/like', async (req, res) => {
             [postId]
         );
 
-        await createNotification({
+        await safeCreateNotification({
             userId: post.user_id,
             actorId,
             type: 'like',
@@ -1372,7 +1392,7 @@ router.post('/:id/comment', async (req, res) => {
             [postId, userId, content.trim()]
         );
 
-        await createNotification({
+        await safeCreateNotification({
             userId: post.user_id,
             actorId: userId,
             type: 'comment',
@@ -1436,7 +1456,7 @@ router.post('/:id/comment/:commentId/reply', async (req, res) => {
             [postId, userId, content.trim(), parentId]
         );
 
-        await createNotification({
+        await safeCreateNotification({
             userId: parentComment.user_id,
             actorId: userId,
             type: 'reply',
@@ -1535,7 +1555,7 @@ router.post('/comments/:commentId/react', async (req, res) => {
         }
 
         if (shouldNotify) {
-            await createNotification({
+            await safeCreateNotification({
                 userId: comment.user_id,
                 actorId: userId,
                 type: 'reaction',
@@ -1619,25 +1639,10 @@ router.post('/comments/:commentId/delete', async (req, res) => {
             return res.status(403).send('You can only delete your own comments');
         }
 
-        await db.query(
-            'DELETE FROM comment_reactions WHERE comment_id = ?',
-            [commentId]
-        );
-
-        await db.query(
-            'DELETE FROM comment_reports WHERE comment_id = ?',
-            [commentId]
-        );
-
-        await db.query(
-            'DELETE FROM notifications WHERE link LIKE ?',
-            [`%#comment-${commentId}`]
-        );
-
-        await db.query(
-            'DELETE FROM comments WHERE id = ?',
-            [commentId]
-        );
+        await db.query('DELETE FROM comment_reactions WHERE comment_id = ?', [commentId]);
+        await db.query('DELETE FROM comment_reports WHERE comment_id = ?', [commentId]);
+        await db.query('DELETE FROM notifications WHERE link LIKE ?', [`%#comment-${commentId}`]);
+        await db.query('DELETE FROM comments WHERE id = ?', [commentId]);
 
         res.redirect(`/posts/${comment.post_id}`);
 

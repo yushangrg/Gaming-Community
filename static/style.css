@@ -6,6 +6,7 @@
    - Notifications page / notification badge
    - Posts listing page
    - Single post detail page
+   - Create post type selector
    - Save posts feature
    - Helpful / Not Helpful post feedback
    - Follow creator/user feature
@@ -276,7 +277,8 @@ form {
 .home-featured-video-card,
 .notification-card,
 .notifications-empty-card,
-.notifications-side-card {
+.notifications-side-card,
+.create-post-type-section {
   background:
     radial-gradient(circle at top right, rgba(139, 92, 246, 0.12), transparent 34%),
     linear-gradient(180deg, var(--card), var(--card-2));
@@ -516,7 +518,96 @@ button:hover,
 
 
 /* =========================================================
-   06. HELPFUL / NOT HELPFUL FEEDBACK
+   06. CREATE POST TYPE SELECTOR
+========================================================= */
+.create-post-type-section {
+  margin-top: 24px;
+  padding: 22px;
+}
+
+.create-post-type-section h3 {
+  margin-bottom: 8px;
+  font-size: 1.15rem;
+}
+
+.create-post-type-section .profile-muted {
+  margin-bottom: 0;
+}
+
+.post-type-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.post-type-choice {
+  position: relative;
+  display: block;
+  cursor: pointer;
+  user-select: none;
+}
+
+.post-type-choice input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.post-type-choice-card {
+  min-height: 86px;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(7, 16, 33, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  transition: 0.2s ease;
+}
+
+.post-type-choice-card span {
+  display: block;
+  color: #93c5fd;
+  font-size: 0.88rem;
+  margin-bottom: 8px;
+}
+
+.post-type-choice-card strong {
+  display: block;
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.post-type-choice:hover .post-type-choice-card {
+  transform: translateY(-2px);
+  border-color: rgba(168, 85, 247, 0.45);
+  background: rgba(15, 23, 42, 0.92);
+}
+
+.post-type-choice input:focus-visible + .post-type-choice-card {
+  outline: 3px solid rgba(168, 85, 247, 0.35);
+  outline-offset: 3px;
+}
+
+.post-type-choice input:checked + .post-type-choice-card {
+  border-color: rgba(168, 85, 247, 0.85);
+  background:
+    radial-gradient(circle at top right, rgba(168, 85, 247, 0.18), transparent 36%),
+    rgba(124, 58, 237, 0.22);
+  box-shadow: 0 0 24px rgba(124, 58, 237, 0.28);
+}
+
+.post-type-choice input:checked + .post-type-choice-card span {
+  color: #e9d5ff;
+}
+
+.post-type-choice input:checked + .post-type-choice-card strong::after {
+  content: " ✓";
+  color: var(--green);
+}
+
+
+/* =========================================================
+   07. HELPFUL / NOT HELPFUL FEEDBACK
 ========================================================= */
 .feedback-btn {
   padding: 10px 14px;
@@ -570,7 +661,7 @@ button:hover,
 
 
 /* =========================================================
-   07. FOOTER
+   08. FOOTER
 ========================================================= */
 .footer {
   margin-top: 60px;
@@ -640,7 +731,7 @@ button:hover,
 
 
 /* =========================================================
-   08. HOME / GENERAL POST CARDS
+   09. HOME / GENERAL POST CARDS
 ========================================================= */
 .hero {
   width: var(--container);
@@ -793,7 +884,7 @@ button:hover,
 
 
 /* =========================================================
-   09. HOMEPAGE DASHBOARD
+   10. HOMEPAGE DASHBOARD
 ========================================================= */
 .home-page {
   width: var(--container);
@@ -1239,7 +1330,7 @@ button:hover,
 
 
 /* =========================================================
-   10. NOTIFICATIONS PAGE
+   11. NOTIFICATIONS PAGE
 ========================================================= */
 .notifications-page {
   width: var(--container);
@@ -1481,7 +1572,7 @@ a.notification-type-row:hover {
 
 
 /* =========================================================
-   11. POSTS LISTING PAGE
+   12. POSTS LISTING PAGE
 ========================================================= */
 .posts-dashboard-page {
   width: var(--container);
@@ -1888,7 +1979,7 @@ a.notification-type-row:hover {
 
 
 /* =========================================================
-   12. SINGLE POST DETAIL PAGE
+   13. SINGLE POST DETAIL PAGE
 ========================================================= */
 .post-detail-page,
 .post-premium-page {
@@ -2174,7 +2265,7 @@ a.notification-type-row:hover {
 
 
 /* =========================================================
-   13. COMMENTS
+   14. COMMENTS
 ========================================================= */
 .comments-card.sidebar-comments {
   max-height: 920px;
@@ -2348,7 +2439,7 @@ a.notification-type-row:hover {
 
 
 /* =========================================================
-   14. USERS / FOLLOWERS / FOLLOWING PAGES
+   15. USERS / FOLLOWERS / FOLLOWING PAGES
 ========================================================= */
 .users-page {
   width: var(--container);
@@ -2685,7 +2776,7 @@ a.notification-type-row:hover {
 
 
 /* =========================================================
-   15. PROFILE / PUBLIC USER PROFILE PAGE
+   16. PROFILE / PUBLIC USER PROFILE PAGE
 ========================================================= */
 .profile-page {
   width: var(--container);
@@ -3093,7 +3184,7 @@ a.profile-stat-row:hover {
 
 
 /* =========================================================
-   16. AUTH PAGES
+   17. AUTH PAGES
 ========================================================= */
 .auth-box,
 .profile-box {
@@ -3122,7 +3213,7 @@ a.profile-stat-row:hover {
 
 
 /* =========================================================
-   17. LEGAL / STATIC CONTENT PAGES
+   18. LEGAL / STATIC CONTENT PAGES
 ========================================================= */
 .legal-page {
   width: min(1100px, 92%);
@@ -3240,7 +3331,7 @@ a.profile-stat-row:hover {
 
 
 /* =========================================================
-   18. FALLBACK FOR OLD SIMPLE MARKUP
+   19. FALLBACK FOR OLD SIMPLE MARKUP
 ========================================================= */
 body > h2,
 body > h3 {
@@ -3261,7 +3352,7 @@ body > h3 + p + a {
 
 
 /* =========================================================
-   19. RESPONSIVE
+   20. RESPONSIVE
 ========================================================= */
 @media (max-width: 1250px) {
   .posts-dashboard-layout {
@@ -3398,7 +3489,8 @@ body > h3 + p + a {
 
   .profile-info-grid,
   .profile-action-grid,
-  .profile-form-grid {
+  .profile-form-grid,
+  .post-type-choice-grid {
     grid-template-columns: 1fr;
   }
 
@@ -3443,6 +3535,10 @@ body > h3 + p + a {
   .notification-card {
     align-items: flex-start;
   }
+
+  .create-post-type-section {
+    padding: 18px;
+  }
 }
 
 @media (max-width: 700px) {
@@ -3455,7 +3551,8 @@ body > h3 + p + a {
   .hero-card,
   .premium-card,
   .profile-card,
-  .legal-card {
+  .legal-card,
+  .create-post-type-section {
     padding: 18px;
     border-radius: 18px;
   }
