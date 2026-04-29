@@ -7,6 +7,44 @@ const db = require('../services/db');
 const router = express.Router();
 
 /* =========================================================
+   POST TYPE / DIFFICULTY OPTIONS
+========================================================= */
+const ALLOWED_POST_TYPES = [
+    'Guide',
+    'Tip',
+    'Trick',
+    'Review',
+    'News',
+    'Question',
+    'Discussion',
+    'Video'
+];
+
+const ALLOWED_DIFFICULTIES = [
+    'Beginner',
+    'Intermediate',
+    'Advanced',
+    'Pro'
+];
+
+function normalizePostType(postType) {
+    return ALLOWED_POST_TYPES.includes(postType) ? postType : 'Guide';
+}
+
+function normalizeDifficulty(difficulty) {
+    return ALLOWED_DIFFICULTIES.includes(difficulty) ? difficulty : 'Beginner';
+}
+
+function calculateReadTime(content) {
+    if (!content || !content.trim()) {
+        return 1;
+    }
+
+    const words = content.trim().split(/\s+/).filter(Boolean).length;
+    return Math.max(1, Math.ceil(words / 200));
+}
+
+/* =========================================================
    IMAGE UPLOAD SETUP
 ========================================================= */
 const uploadDir = path.join(__dirname, '../../static/uploads');
@@ -167,6 +205,8 @@ router.get('/', async (req, res) => {
         const tag = req.query.tag || '';
         const search = req.query.search || '';
         const userFilter = req.query.user || req.query.userId || '';
+        const postType = req.query.type || '';
+        const difficulty = req.query.difficulty || '';
         const currentUserId = req.session.user ? req.session.user.id : 0;
 
         let query = `
@@ -216,14 +256,24 @@ router.get('/', async (req, res) => {
             params.push(category);
         }
 
+        if (postType) {
+            query += ' AND posts.post_type = ?';
+            params.push(postType);
+        }
+
+        if (difficulty) {
+            query += ' AND posts.difficulty = ?';
+            params.push(difficulty);
+        }
+
         if (tag) {
             query += ' AND tags.name = ?';
             params.push(tag);
         }
 
         if (search) {
-            query += ' AND (posts.title LIKE ? OR posts.content LIKE ?)';
-            params.push(`%${search}%`, `%${search}%`);
+            query += ' AND (posts.title LIKE ? OR posts.content LIKE ? OR posts.category LIKE ?)';
+            params.push(`%${search}%`, `%${search}%`, `%${search}%`);
         }
 
         if (userFilter) {
@@ -246,6 +296,10 @@ router.get('/', async (req, res) => {
             tag,
             search,
             selectedUser: userFilter,
+            selectedType: postType,
+            selectedDifficulty: difficulty,
+            postTypes: ALLOWED_POST_TYPES,
+            difficulties: ALLOWED_DIFFICULTIES,
             pageTitle: 'Posts',
             user: req.session.user || null,
             currentUser: req.session.user || null
@@ -309,6 +363,10 @@ router.get('/saved', async (req, res) => {
             tag: '',
             search: '',
             selectedUser: '',
+            selectedType: '',
+            selectedDifficulty: '',
+            postTypes: ALLOWED_POST_TYPES,
+            difficulties: ALLOWED_DIFFICULTIES,
             pageTitle: 'Saved Posts',
             user: req.session.user || null,
             currentUser: req.session.user || null
@@ -330,6 +388,8 @@ router.get('/create', async (req, res) => {
         }
 
         res.render('create-post', {
+            postTypes: ALLOWED_POST_TYPES,
+            difficulties: ALLOWED_DIFFICULTIES,
             user: req.session.user || null,
             currentUser: req.session.user || null
         });
@@ -349,12 +409,25 @@ router.post('/create', uploadSingleImage, async (req, res) => {
             return res.redirect('/login');
         }
 
-        const { title, content, category, image_url, video } = req.body;
+        const {
+            title,
+            content,
+            category,
+            post_type,
+            difficulty,
+            image_url,
+            video
+        } = req.body;
+
         const userId = req.session.user.id;
 
         if (!title || !content || !category) {
             return res.status(400).send('Missing title, content, or category');
         }
+
+        const finalPostType = normalizePostType(post_type);
+        const finalDifficulty = normalizeDifficulty(difficulty);
+        const readTime = calculateReadTime(content);
 
         const uploadedImagePath = req.file ? `/uploads/${req.file.filename}` : null;
         const imageUrl = image_url && image_url.trim() ? image_url.trim() : null;
@@ -365,13 +438,29 @@ router.post('/create', uploadSingleImage, async (req, res) => {
         const [result] = await db.query(
             `
             INSERT INTO posts 
-            (title, content, category, image, video, user_id, likes, rating, views) 
-            VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0)
+            (
+                title,
+                content,
+                category,
+                post_type,
+                difficulty,
+                read_time,
+                image,
+                video,
+                user_id,
+                likes,
+                rating,
+                views
+            ) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0)
             `,
             [
                 title.trim(),
                 content.trim(),
                 category.trim(),
+                finalPostType,
+                finalDifficulty,
+                readTime,
                 finalImage,
                 embedVideo,
                 userId
@@ -388,7 +477,6 @@ router.post('/create', uploadSingleImage, async (req, res) => {
 
 /* =========================================================
    EDIT POST PAGE
-   Keep this before router.get('/:id')
 ========================================================= */
 router.get('/:id/edit', async (req, res) => {
     try {
@@ -420,6 +508,8 @@ router.get('/:id/edit', async (req, res) => {
 
         res.render('edit-post', {
             post,
+            postTypes: ALLOWED_POST_TYPES,
+            difficulties: ALLOWED_DIFFICULTIES,
             user: req.session.user || null,
             currentUser: req.session.user || null
         });
@@ -441,7 +531,16 @@ router.post('/:id/edit', uploadSingleImage, async (req, res) => {
 
         const postId = req.params.id;
         const userId = req.session.user.id;
-        const { title, content, category, image_url, video } = req.body;
+
+        const {
+            title,
+            content,
+            category,
+            post_type,
+            difficulty,
+            image_url,
+            video
+        } = req.body;
 
         if (!title || !content || !category) {
             return res.status(400).send('Missing title, content, or category');
@@ -466,9 +565,14 @@ router.post('/:id/edit', uploadSingleImage, async (req, res) => {
             return res.status(403).send('You can only edit your own posts');
         }
 
+        const finalPostType = normalizePostType(post_type);
+        const finalDifficulty = normalizeDifficulty(difficulty);
+        const readTime = calculateReadTime(content);
+
         const uploadedImagePath = req.file ? `/uploads/${req.file.filename}` : null;
         const imageUrl = image_url && image_url.trim() ? image_url.trim() : null;
         const finalImage = uploadedImagePath || imageUrl || post.image;
+
         const embedVideo = convertYouTubeUrlToEmbed(video);
 
         if (uploadedImagePath && post.image && post.image.startsWith('/uploads/')) {
@@ -482,6 +586,9 @@ router.post('/:id/edit', uploadSingleImage, async (req, res) => {
                 title = ?,
                 content = ?,
                 category = ?,
+                post_type = ?,
+                difficulty = ?,
+                read_time = ?,
                 image = ?,
                 video = ?
             WHERE id = ?
@@ -490,6 +597,9 @@ router.post('/:id/edit', uploadSingleImage, async (req, res) => {
                 title.trim(),
                 content.trim(),
                 category.trim(),
+                finalPostType,
+                finalDifficulty,
+                readTime,
                 finalImage,
                 embedVideo,
                 postId

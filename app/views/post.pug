@@ -17,31 +17,31 @@ mixin renderComment(comment, post, currentUser, level)
 
       .comment-actions
         if currentUser
-          form(action=`/posts/comments/${comment.id}/react` method="POST")
-            input(type="hidden" name="reaction" value="like")
-            button(type="submit" class="comment-action-btn") 👍 #{comment.reactionCounts && comment.reactionCounts.like ? comment.reactionCounts.like : 0}
+          form(action=`/posts/comments/${comment.id}/react`, method="POST")
+            input(type="hidden", name="reaction", value="like")
+            button(type="submit", class="comment-action-btn") 👍 #{comment.reactionCounts && comment.reactionCounts.like ? comment.reactionCounts.like : 0}
 
-          form(action=`/posts/comments/${comment.id}/react` method="POST")
-            input(type="hidden" name="reaction" value="helpful")
-            button(type="submit" class="comment-action-btn") 💡 #{comment.reactionCounts && comment.reactionCounts.helpful ? comment.reactionCounts.helpful : 0}
+          form(action=`/posts/comments/${comment.id}/react`, method="POST")
+            input(type="hidden", name="reaction", value="helpful")
+            button(type="submit", class="comment-action-btn") 💡 #{comment.reactionCounts && comment.reactionCounts.helpful ? comment.reactionCounts.helpful : 0}
 
-          form(action=`/posts/comments/${comment.id}/react` method="POST")
-            input(type="hidden" name="reaction" value="funny")
-            button(type="submit" class="comment-action-btn") 😂 #{comment.reactionCounts && comment.reactionCounts.funny ? comment.reactionCounts.funny : 0}
+          form(action=`/posts/comments/${comment.id}/react`, method="POST")
+            input(type="hidden", name="reaction", value="funny")
+            button(type="submit", class="comment-action-btn") 😂 #{comment.reactionCounts && comment.reactionCounts.funny ? comment.reactionCounts.funny : 0}
 
           if !comment.hasReported
-            form(action=`/posts/comments/${comment.id}/report` method="POST")
-              button(type="submit" class="comment-action-btn warning") 🚩 Report
+            form(action=`/posts/comments/${comment.id}/report`, method="POST")
+              button(type="submit", class="comment-action-btn warning") 🚩 Report
           else
             span.comment-status Reported
 
-          form(action=`/posts/${post.id}/comment/${comment.id}/reply` method="POST" class="comment-reply-form")
-            textarea(name="content" rows="2" placeholder="Write a reply..." required)
-            button(type="submit" class="comment-action-btn accent") Reply
+          form(action=`/posts/${post.id}/comment/${comment.id}/reply`, method="POST", class="comment-reply-form")
+            textarea(name="content", rows="2", placeholder="Write a reply...", required)
+            button(type="submit", class="comment-action-btn accent") Reply
 
           if comment.isOwner
-            form(action=`/posts/comments/${comment.id}/delete` method="POST" onsubmit="return confirm('Delete this comment?');")
-              button(type="submit" class="comment-action-btn danger") 🗑 Delete
+            form(action=`/posts/comments/${comment.id}/delete`, method="POST", onsubmit="return confirm('Delete this comment?');")
+              button(type="submit", class="comment-action-btn danger") 🗑 Delete
         else
           span.comment-status Login to react or reply
 
@@ -59,9 +59,12 @@ block content
   - const published = post.created_at ? new Date(post.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recently'
   - const authorInitial = post.username ? post.username.charAt(0).toUpperCase() : 'U'
   - const ratingValue = post.rating ? parseFloat(post.rating).toFixed(1) : '0.0'
-  - const saveCount = post.save_count || 0
-  - const followerCount = post.follower_count || 0
+  - const saveCount = Number(post.save_count || 0)
+  - const followerCount = Number(post.follower_count || 0)
   - const isOwner = viewer && Number(viewer.id) === Number(post.user_id)
+  - const postType = post.post_type || 'Guide'
+  - const difficulty = post.difficulty || 'Beginner'
+  - const readTime = Number(post.read_time || 1)
 
   .post-detail-page
     .post-page-container
@@ -83,8 +86,14 @@ block content
 
             h1.post-title= post.title
 
+            .tag-chip-row
+              a.tag-chip(href=`/posts?category=${encodeURIComponent(post.category || 'Gaming')}`) 🎮 #{post.category || 'Gaming'}
+              a.tag-chip(href=`/posts?type=${encodeURIComponent(postType)}`) 🧩 #{postType}
+              a.tag-chip(href=`/posts?difficulty=${encodeURIComponent(difficulty)}`) 🎯 #{difficulty}
+              span.tag-chip ⏱ #{readTime} min read
+
             .post-author-row
-              .author-chip
+              a.author-chip(href=`/users/${post.user_id}`)
                 .author-avatar= authorInitial
                 .author-copy
                   strong= post.username || 'Unknown'
@@ -93,8 +102,8 @@ block content
 
               .author-actions
                 if viewer && !isOwner
-                  form(action=`/posts/${post.id}/follow-creator` method="POST")
-                    button(type="submit" class=post.is_following ? 'follow-btn is-following' : 'follow-btn')
+                  form(action=`/posts/${post.id}/follow-creator`, method="POST")
+                    button(type="submit", class=(post.is_following ? 'follow-btn is-following' : 'follow-btn'))
                       if post.is_following
                         | ✓ Following
                       else
@@ -105,17 +114,17 @@ block content
               if isOwner
                 .owner-actions
                   a(href=`/posts/${post.id}/edit`)
-                    button(type="button" class="ghost-btn") ✏️ Edit
-                  form(action=`/posts/${post.id}/delete` method="POST" onsubmit="return confirm('Delete this post?');")
-                    button(type="submit" class="ghost-btn danger") 🗑 Delete
+                    button(type="button", class="ghost-btn") ✏️ Edit
+                  form(action=`/posts/${post.id}/delete`, method="POST", onsubmit="return confirm('Delete this post?');")
+                    button(type="submit", class="ghost-btn danger") 🗑 Delete
 
             .post-like-row
               a(href=`/posts/${post.id}/like`)
-                button(type="button" class="like-btn") 💜 Like #{post.likes || 0}
+                button(type="button", class="like-btn") 💜 Like #{post.likes || 0}
 
               if viewer
-                form(action=`/posts/${post.id}/save` method="POST")
-                  button(type="submit" class=post.is_saved ? 'save-btn is-saved' : 'save-btn')
+                form(action=`/posts/${post.id}/save`, method="POST")
+                  button(type="submit", class=(post.is_saved ? 'save-btn is-saved' : 'save-btn'))
                     if post.is_saved
                       | 💾 Saved #{saveCount}
                     else
@@ -124,7 +133,7 @@ block content
                 a.save-btn(href="/login") 💾 Login to save
 
             .post-image-frame
-              img(src=post.image || "https://placehold.co/1200x700/0f172a/f8fafc?text=Gaming" alt=post.title)
+              img(src=post.image || "https://placehold.co/1200x700/0f172a/f8fafc?text=Gaming", alt=post.title)
 
             if post.video
               .post-video-frame
@@ -144,7 +153,7 @@ block content
             if safeTags.length
               .tag-chip-row
                 each tag in safeTags
-                  a.tag-chip(href=`/posts?tag=${tag.name}`)= `#${tag.name}`
+                  a.tag-chip(href=`/posts?tag=${encodeURIComponent(tag.name)}`)= `#${tag.name}`
 
             .post-footer-stats
               .stat-pill 👁 #{post.views || 0} Views
@@ -152,6 +161,9 @@ block content
               .stat-pill 💾 #{saveCount} Saves
               .stat-pill 💬 #{totalComments} Comments
               .stat-pill ⭐ #{ratingValue} Rating
+              .stat-pill 🧩 #{postType}
+              .stat-pill 🎯 #{difficulty}
+              .stat-pill ⏱ #{readTime} min read
 
         aside.post-sidebar
           .ui-card.side-card
@@ -160,15 +172,31 @@ block content
               .info-row
                 span.label Category
                 span.value= post.category || 'Gaming'
+
+              .info-row
+                span.label Type
+                span.value= postType
+
+              .info-row
+                span.label Difficulty
+                span.value= difficulty
+
+              .info-row
+                span.label Read Time
+                span.value #{readTime} min
+
               .info-row
                 span.label Published
                 span.value= published
+
               .info-row
                 span.label Likes
                 span.value= post.likes || 0
+
               .info-row
                 span.label Saves
                 span.value= saveCount
+
               .info-row
                 span.label Rating
                 span.value #{ratingValue} / 5
@@ -176,15 +204,15 @@ block content
           .ui-card.side-card
             h3.side-title 👤 Creator
             .creator-side-profile
-              .author-chip
+              a.author-chip(href=`/users/${post.user_id}`)
                 .author-avatar= authorInitial
                 .author-copy
                   strong= post.username || 'Unknown'
                   span #{followerCount} followers
 
               if viewer && !isOwner
-                form(action=`/posts/${post.id}/follow-creator` method="POST")
-                  button(type="submit" class=post.is_following ? 'primary-btn is-following' : 'primary-btn')
+                form(action=`/posts/${post.id}/follow-creator`, method="POST")
+                  button(type="submit", class=(post.is_following ? 'primary-btn is-following' : 'primary-btn'))
                     if post.is_following
                       | ✓ Following
                     else
@@ -195,14 +223,14 @@ block content
           if viewer
             .ui-card.side-card
               h3.side-title ⭐ Rate This Post
-              form(action=`/posts/${post.id}/rate` method="POST" class="side-rate-form")
+              form(action=`/posts/${post.id}/rate`, method="POST", class="side-rate-form")
                 select(name="rating")
                   option(value="1") 1 Star
                   option(value="2") 2 Stars
                   option(value="3") 3 Stars
                   option(value="4") 4 Stars
                   option(value="5") 5 Stars
-                button(type="submit" class="primary-btn") Submit Rating
+                button(type="submit", class="primary-btn") Submit Rating
           else
             .ui-card.side-card
               h3.side-title ⭐ Rating
@@ -215,7 +243,7 @@ block content
               h3.side-title 🏷 Tags
               .tag-chip-row.sidebar-tags
                 each tag in safeTags
-                  a.tag-chip(href=`/posts?tag=${tag.name}`)= tag.name
+                  a.tag-chip(href=`/posts?tag=${encodeURIComponent(tag.name)}`)= tag.name
 
           .ui-card.comments-card.sidebar-comments
             .section-head
@@ -223,10 +251,10 @@ block content
               span.comment-count= totalComments
 
             if viewer
-              form(action=`/posts/${post.id}/comment` method="POST" class="comment-form")
-                textarea(name="content" rows="3" placeholder="Add a comment..." required)
+              form(action=`/posts/${post.id}/comment`, method="POST", class="comment-form")
+                textarea(name="content", rows="3", placeholder="Add a comment...", required)
                 .comment-form-actions
-                  button(type="submit" class="primary-btn") Post Comment
+                  button(type="submit", class="primary-btn") Post Comment
             else
               p.login-hint
                 a(href="/login") Login

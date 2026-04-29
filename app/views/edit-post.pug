@@ -6,7 +6,7 @@ block content
       .profile-card-head
         div
           h2 ✏️ Edit Post
-          p.profile-muted Update your post title, category, image, video, and content.
+          p.profile-muted Update your post details.
 
         a.profile-secondary-btn(href=`/posts/${post.id}`) Cancel
 
@@ -19,21 +19,38 @@ block content
               id="title"
               name="title"
               value=post.title
-              placeholder="Post title..."
               required
             )
 
           .form-group
-            label(for="category") Category
-            select(id="category", name="category", required)
-              option(value="FPS", selected=post.category === "FPS") FPS
-              option(value="RPG", selected=post.category === "RPG") RPG
-              option(value="Tips", selected=post.category === "Tips") Tips
-              option(value="Guide", selected=post.category === "Guide") Guide
-              option(value="Review", selected=post.category === "Review") Review
-              option(value="Mobile", selected=post.category === "Mobile") Mobile
-              option(value="Indie", selected=post.category === "Indie") Indie
-              option(value="Other", selected=post.category === "Other") Other
+            label(for="category") Game / Category
+            input(
+              type="text"
+              id="category"
+              name="category"
+              value=post.category
+              required
+            )
+
+          .form-group
+            label(for="post_type") Post Type
+            select(id="post_type", name="post_type", required)
+              option(value="Guide", selected=post.post_type === "Guide") Guide
+              option(value="Tip", selected=post.post_type === "Tip") Tip
+              option(value="Trick", selected=post.post_type === "Trick") Trick
+              option(value="Review", selected=post.post_type === "Review") Review
+              option(value="News", selected=post.post_type === "News") News
+              option(value="Question", selected=post.post_type === "Question") Question
+              option(value="Discussion", selected=post.post_type === "Discussion") Discussion
+              option(value="Video", selected=post.post_type === "Video") Video
+
+          .form-group
+            label(for="difficulty") Difficulty
+            select(id="difficulty", name="difficulty", required)
+              option(value="Beginner", selected=post.difficulty === "Beginner") Beginner
+              option(value="Intermediate", selected=post.difficulty === "Intermediate") Intermediate
+              option(value="Advanced", selected=post.difficulty === "Advanced") Advanced
+              option(value="Pro", selected=post.difficulty === "Pro") Pro
 
           .form-group
             label(for="image") Upload New Image
@@ -43,7 +60,7 @@ block content
               name="image"
               accept="image/jpeg,image/png,image/webp,image/gif"
             )
-            small Leave this empty if you want to keep the current image.
+            small Leave empty to keep the current image.
 
           if post.image
             .form-group.full
@@ -60,7 +77,6 @@ block content
               value=post.image && !post.image.startsWith('/uploads/') ? post.image : ''
               placeholder="https://example.com/image.jpg"
             )
-            small If you upload a new image, the uploaded image will be used instead of this URL.
 
           .form-group.full
             label(for="video") YouTube Video URL
@@ -71,7 +87,6 @@ block content
               value=post.video || ''
               placeholder="https://www.youtube.com/watch?v=VIDEO_ID"
             )
-            small You can paste a normal YouTube link. The app will convert it to an embed link automatically.
 
           .form-group.full
             label(for="content") Content
@@ -79,7 +94,6 @@ block content
               id="content"
               name="content"
               rows="8"
-              placeholder="Write your post..."
               required
             )= post.content
 

@@ -5,25 +5,49 @@ block content
   - const activeCategory = typeof category !== 'undefined' ? category : ''
   - const activeTag = typeof tag !== 'undefined' ? tag : ''
   - const activeSearch = typeof search !== 'undefined' ? search : ''
+  - const activeType = typeof selectedType !== 'undefined' ? selectedType : ''
+  - const activeDifficulty = typeof selectedDifficulty !== 'undefined' ? selectedDifficulty : ''
+  - const viewer = (typeof currentUser !== 'undefined' && currentUser) ? currentUser : (typeof user !== 'undefined' ? user : null)
+  - const titleText = typeof pageTitle !== 'undefined' && pageTitle ? pageTitle : 'Game Posts'
   - const categories = ['Action', 'Adventure', 'RPG', 'Shooter', 'Strategy', 'Racing', 'Sports', 'Indie', 'FPS', 'Tips', 'Mobile']
   - const tagsList = ['RPG', 'Guide', 'Beginner', 'FPS', 'Tips', 'Mobile', 'Indie']
+  - const typeOptions = typeof postTypes !== 'undefined' && postTypes ? postTypes : ['Guide', 'Tip', 'Trick', 'Review', 'News', 'Question', 'Discussion', 'Video']
+  - const difficultyOptions = typeof difficulties !== 'undefined' && difficulties ? difficulties : ['Beginner', 'Intermediate', 'Advanced', 'Pro']
 
   .posts-dashboard-page
     section.posts-hero-panel
       .hero-art-left
       .hero-art-right
+
       .posts-hero-content
         h1 Share. Discuss. 
           span Dominate.
-        p Join the ultimate gaming community. Share your experiences, tips, reviews, and epic gaming moments.
-        form(action="/posts" method="GET" class="hero-search-form")
-          input(type="text" name="search" placeholder="Search games, posts, users..." value=activeSearch)
+        p Join the ultimate gaming community. Share guides, tips, tricks, reviews, news, questions, videos, and epic gaming moments.
+
+        form(action="/posts", method="GET", class="hero-search-form")
+          if activeCategory
+            input(type="hidden", name="category", value=activeCategory)
+          if activeTag
+            input(type="hidden", name="tag", value=activeTag)
+          if activeType
+            input(type="hidden", name="type", value=activeType)
+          if activeDifficulty
+            input(type="hidden", name="difficulty", value=activeDifficulty)
+
+          input(type="text", name="search", placeholder="Search games, posts, guides, users...", value=activeSearch)
           button(type="submit") Search
 
     .posts-filter-row
-      a.filter-pill(class=!activeCategory && !activeTag ? 'active' : '' href="/posts") All Posts
-      each cat in categories.slice(0, 6)
-        a.filter-pill(class=activeCategory === cat ? 'active' : '' href=`/posts?category=${encodeURIComponent(cat)}`)= cat
+      a.filter-pill(
+        class=!activeCategory && !activeTag && !activeType && !activeDifficulty ? 'active' : ''
+        href="/posts"
+      ) All Posts
+
+      each item in typeOptions
+        a.filter-pill(
+          class=activeType === item ? 'active' : ''
+          href=`/posts?type=${encodeURIComponent(item)}`
+        )= item
 
       .sort-pill Latest ▾
 
@@ -32,44 +56,100 @@ block content
         .dashboard-side-card
           h3 Categories
           .category-list
-            a.category-row(class=!activeCategory ? 'active' : '' href="/posts")
+            a.category-row(class=!activeCategory ? 'active' : '', href="/posts")
               span.category-name All
               span.category-count= safePosts.length
+
             each cat in categories
-              a.category-row(class=activeCategory === cat ? 'active' : '' href=`/posts?category=${encodeURIComponent(cat)}`)
+              a.category-row(
+                class=activeCategory === cat ? 'active' : ''
+                href=`/posts?category=${encodeURIComponent(cat)}`
+              )
                 span.category-name= cat
                 span.category-count posts
+
+        .dashboard-side-card
+          h3 Post Types
+          .category-list
+            a.category-row(class=!activeType ? 'active' : '', href="/posts")
+              span.category-name All Types
+              span.category-count type
+
+            each item in typeOptions
+              a.category-row(
+                class=activeType === item ? 'active' : ''
+                href=`/posts?type=${encodeURIComponent(item)}`
+              )
+                span.category-name= item
+                span.category-count type
+
+        .dashboard-side-card
+          h3 Difficulty
+          .category-list
+            a.category-row(class=!activeDifficulty ? 'active' : '', href="/posts")
+              span.category-name All Levels
+              span.category-count level
+
+            each item in difficultyOptions
+              a.category-row(
+                class=activeDifficulty === item ? 'active' : ''
+                href=`/posts?difficulty=${encodeURIComponent(item)}`
+              )
+                span.category-name= item
+                span.category-count level
 
         .dashboard-side-card
           h3 Tags
           .category-list
             each tagName in tagsList
-              a.category-row(class=activeTag === tagName ? 'active' : '' href=`/posts?tag=${encodeURIComponent(tagName)}`)
+              a.category-row(
+                class=activeTag === tagName ? 'active' : ''
+                href=`/posts?tag=${encodeURIComponent(tagName)}`
+              )
                 span.category-name # #{tagName}
                 span.category-count tag
 
       main.posts-feed
         .feed-header
-          h2 🎮 Game Posts
-          form(action="/posts" method="GET" class="feed-search-form")
-            input(type="text" name="search" placeholder="Search posts..." value=activeSearch)
+          h2 🎮 #{titleText}
+
+          form(action="/posts", method="GET", class="feed-search-form")
+            if activeCategory
+              input(type="hidden", name="category", value=activeCategory)
+            if activeTag
+              input(type="hidden", name="tag", value=activeTag)
+            if activeType
+              input(type="hidden", name="type", value=activeType)
+            if activeDifficulty
+              input(type="hidden", name="difficulty", value=activeDifficulty)
+
+            input(type="text", name="search", placeholder="Search posts...", value=activeSearch)
             button(type="submit") Search
 
         if safePosts.length === 0
           .empty-feed-card
             h3 No posts found
-            p Try another search, category, or tag.
-            a(href="/posts") View all posts
+            p Try another search, category, post type, difficulty, or tag.
+            a.read-more-btn(href="/posts") View all posts
         else
           .professional-post-list
             each post in safePosts
               - const postDate = post.created_at ? new Date(post.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recently'
-              - const excerpt = post.content ? (post.content.length > 140 ? post.content.slice(0, 140) + '...' : post.content) : 'No description yet.'
+              - const excerpt = post.content ? (post.content.length > 150 ? post.content.slice(0, 150) + '...' : post.content) : 'No description yet.'
               - const ratingValue = post.rating ? parseFloat(post.rating).toFixed(1) : '0.0'
+              - const postType = post.post_type || 'Guide'
+              - const difficulty = post.difficulty || 'Beginner'
+              - const readTime = Number(post.read_time || 1)
+              - const saveCount = Number(post.save_count || 0)
+              - const commentsCount = Number(post.comment_count || post.comments_count || post.total_comments || 0)
+              - const authorInitial = post.username ? post.username.charAt(0).toUpperCase() : 'U'
 
               article.professional-post-card
                 a.post-thumb-link(href=`/posts/${post.id}`)
-                  img(src=post.image || "https://placehold.co/640x420/0f172a/f8fafc?text=Gaming" alt=post.title)
+                  img(
+                    src=post.image || "https://placehold.co/640x420/0f172a/f8fafc?text=Gaming"
+                    alt=post.title
+                  )
 
                 .professional-post-content
                   .card-top-line
@@ -79,37 +159,79 @@ block content
                   h3
                     a(href=`/posts/${post.id}`)= post.title
 
+                  .tag-chip-row
+                    a.tag-chip(href=`/posts?type=${encodeURIComponent(postType)}`) 🧩 #{postType}
+                    a.tag-chip(href=`/posts?difficulty=${encodeURIComponent(difficulty)}`) 🎯 #{difficulty}
+                    span.tag-chip ⏱ #{readTime} min read
+
                   p.post-excerpt= excerpt
 
                   .post-meta-row
-                    .author-mini
-                      .author-mini-avatar= post.username ? post.username.charAt(0).toUpperCase() : 'U'
+                    a.author-mini(href=`/users/${post.user_id}`)
+                      .author-mini-avatar= authorInitial
                       span= post.username || 'Unknown'
 
                     .post-small-stats
                       span 👁 #{post.views || 0}
-                      span 💬 #{post.comment_count || 0}
+                      span 💬 #{commentsCount}
                       span 💜 #{post.likes || 0}
+                      span 💾 #{saveCount}
                       span ⭐ #{ratingValue}
 
                   .post-card-actions
                     a.read-more-btn(href=`/posts/${post.id}`) Read Post
+
+                    if viewer
+                      form(action=`/posts/${post.id}/save`, method="POST")
+                        button(type="submit", class=post.is_saved ? 'save-btn is-saved' : 'save-btn')
+                          if post.is_saved
+                            | 💾 Saved
+                          else
+                            | 💾 Save
+                    else
+                      a.save-btn(href="/login") 💾 Save
 
       aside.posts-right-sidebar
         .dashboard-side-card
           h3 Quick Stats
           .quick-stat-list
             .quick-stat-row
-              span Total Posts
+              span Showing Posts
               strong= safePosts.length
+
             .quick-stat-row
               span Active Category
               strong= activeCategory || 'All'
+
+            .quick-stat-row
+              span Active Type
+              strong= activeType || 'All'
+
+            .quick-stat-row
+              span Difficulty
+              strong= activeDifficulty || 'All'
+
             .quick-stat-row
               span Active Tag
               strong= activeTag || 'None'
 
         .dashboard-side-card
+          h3 Better Post System
+          p.side-muted Filter posts by type and difficulty to find guides, tips, tricks, reviews, questions, discussions, and pro-level strategies faster.
+
+          .quick-stat-list
+            .quick-stat-row
+              span Types
+              strong= typeOptions.length
+            .quick-stat-row
+              span Difficulty Levels
+              strong= difficultyOptions.length
+
+        .dashboard-side-card
           h3 Community
-          p.side-muted Discover posts, reviews, tips, builds, guides, and gaming discussions from the community.
-          a.side-action-btn(href="/posts/create") Create Post
+          p.side-muted Discover posts, reviews, tips, builds, guides, videos, and gaming discussions from the community.
+
+          if viewer
+            a.side-action-btn(href="/posts/create") Create Post
+          else
+            a.side-action-btn(href="/login") Login to Create

@@ -6,7 +6,7 @@ block content
       .profile-card-head
         div
           h2 ✍️ Create New Post
-          p.profile-muted Share a gaming tip, guide, review, trick, or tutorial with the community.
+          p.profile-muted Share a gaming guide, tip, trick, review, question, or discussion.
 
       form.profile-edit-form(action="/posts/create", method="POST", enctype="multipart/form-data")
         .profile-form-grid
@@ -16,21 +16,39 @@ block content
               type="text"
               id="title"
               name="title"
-              placeholder="Example: Best Valorant aim tips for beginners"
+              placeholder="Example: Best GTA V money tricks"
               required
             )
 
           .form-group
-            label(for="category") Category
-            select(id="category", name="category", required)
-              option(value="FPS") FPS
-              option(value="RPG") RPG
-              option(value="Tips") Tips
+            label(for="category") Game / Category
+            input(
+              type="text"
+              id="category"
+              name="category"
+              placeholder="Example: GTA V, Valorant, Minecraft"
+              required
+            )
+
+          .form-group
+            label(for="post_type") Post Type
+            select(id="post_type", name="post_type", required)
               option(value="Guide") Guide
+              option(value="Tip") Tip
+              option(value="Trick") Trick
               option(value="Review") Review
-              option(value="Mobile") Mobile
-              option(value="Indie") Indie
-              option(value="Other") Other
+              option(value="News") News
+              option(value="Question") Question
+              option(value="Discussion") Discussion
+              option(value="Video") Video
+
+          .form-group
+            label(for="difficulty") Difficulty
+            select(id="difficulty", name="difficulty", required)
+              option(value="Beginner") Beginner
+              option(value="Intermediate") Intermediate
+              option(value="Advanced") Advanced
+              option(value="Pro") Pro
 
           .form-group
             label(for="image") Upload Image
@@ -40,7 +58,7 @@ block content
               name="image"
               accept="image/jpeg,image/png,image/webp,image/gif"
             )
-            small Upload a screenshot, cover image, or gaming image. Max size: 5MB.
+            small Max size: 5MB.
 
           .form-group.full
             label(for="image_url") Or Image URL
@@ -60,7 +78,6 @@ block content
               name="video"
               placeholder="https://www.youtube.com/watch?v=VIDEO_ID"
             )
-            small You can paste a normal YouTube link. The app will convert it to an embed link automatically.
 
           .form-group.full
             label(for="content") Content
@@ -68,7 +85,7 @@ block content
               id="content"
               name="content"
               rows="8"
-              placeholder="Write your gaming post, tip, walkthrough, or strategy..."
+              placeholder="Write your guide, tip, trick, review, or question..."
               required
             )
 
