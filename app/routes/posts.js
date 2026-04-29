@@ -3,6 +3,9 @@ const db = require('../services/db');
 
 const router = express.Router();
 
+/* =========================================================
+   BUILD COMMENT TREE
+========================================================= */
 function buildCommentTree(comments) {
     const map = {};
     const roots = [];
@@ -25,9 +28,58 @@ function buildCommentTree(comments) {
     return roots;
 }
 
-// ======================
-// LISTING PAGE
-// ======================
+/* =========================================================
+   CONVERT YOUTUBE URL TO EMBED URL
+========================================================= */
+function convertYouTubeUrlToEmbed(url) {
+    if (!url || !url.trim()) {
+        return null;
+    }
+
+    const cleanUrl = url.trim();
+
+    try {
+        const parsedUrl = new URL(cleanUrl);
+        const hostname = parsedUrl.hostname.toLowerCase().replace('www.', '');
+        let videoId = null;
+
+        if (hostname.includes('youtube.com')) {
+            if (parsedUrl.pathname === '/watch') {
+                videoId = parsedUrl.searchParams.get('v');
+            }
+
+            if (parsedUrl.pathname.startsWith('/shorts/')) {
+                videoId = parsedUrl.pathname.split('/')[2];
+            }
+
+            if (parsedUrl.pathname.startsWith('/live/')) {
+                videoId = parsedUrl.pathname.split('/')[2];
+            }
+
+            if (parsedUrl.pathname.startsWith('/embed/')) {
+                videoId = parsedUrl.pathname.split('/')[2];
+            }
+        }
+
+        if (hostname.includes('youtu.be')) {
+            videoId = parsedUrl.pathname.split('/')[1];
+        }
+
+        if (!videoId) {
+            return cleanUrl;
+        }
+
+        videoId = videoId.split('?')[0].split('&')[0].split('/')[0];
+
+        return `https://www.youtube.com/embed/${videoId}`;
+    } catch (err) {
+        return cleanUrl;
+    }
+}
+
+/* =========================================================
+   LISTING PAGE
+========================================================= */
 router.get('/', async (req, res) => {
     try {
         const category = req.query.category || '';
@@ -55,6 +107,7 @@ router.get('/', async (req, res) => {
                 ) AS is_saved
 
             FROM posts
+
             JOIN users ON posts.user_id = users.id
 
             LEFT JOIN (
@@ -112,19 +165,21 @@ router.get('/', async (req, res) => {
             tag,
             search,
             selectedUser: userFilter,
+            pageTitle: 'Posts',
             user: req.session.user || null,
             currentUser: req.session.user || null
         });
+
     } catch (err) {
-        console.error(err);
+        console.error('LIST POSTS ERROR:', err);
         res.status(500).send('Server Error');
     }
 });
 
-// ======================
-// SAVED POSTS PAGE
-// IMPORTANT: keep this before router.get('/:id')
-// ======================
+/* =========================================================
+   SAVED POSTS PAGE
+   IMPORTANT: keep this before router.get('/:id')
+========================================================= */
 router.get('/saved', async (req, res) => {
     try {
         if (!req.session.user) {
@@ -145,6 +200,7 @@ router.get('/saved', async (req, res) => {
                 1 AS is_saved
 
             FROM saved_posts
+
             JOIN posts ON saved_posts.post_id = posts.id
             JOIN users ON posts.user_id = users.id
 
@@ -176,15 +232,16 @@ router.get('/saved', async (req, res) => {
             user: req.session.user || null,
             currentUser: req.session.user || null
         });
+
     } catch (err) {
-        console.error(err);
+        console.error('SAVED POSTS ERROR:', err);
         res.status(500).send('Server Error');
     }
 });
 
-// ======================
-// CREATE POST PAGE
-// ======================
+/* =========================================================
+   CREATE POST PAGE
+========================================================= */
 router.get('/create', async (req, res) => {
     try {
         if (!req.session.user) {
@@ -195,54 +252,72 @@ router.get('/create', async (req, res) => {
             user: req.session.user || null,
             currentUser: req.session.user || null
         });
+
     } catch (err) {
-        console.error(err);
+        console.error('CREATE POST PAGE ERROR:', err);
         res.status(500).send('Server Error');
     }
 });
 
-// ======================
-// CREATE POST SUBMIT
-// ======================
+/* =========================================================
+   CREATE POST SUBMIT
+========================================================= */
 router.post('/create', async (req, res) => {
     try {
         if (!req.session.user) {
             return res.redirect('/login');
         }
 
+        console.log('CREATE POST BODY:', req.body);
+
         const { title, content, category, image, video } = req.body;
-        const user_id = req.session.user.id;
+        const userId = req.session.user.id;
 
         if (!title || !content || !category) {
-            return res.redirect('/posts/create');
+            console.log('CREATE POST MISSING FIELDS:', {
+                title,
+                content,
+                category
+            });
+
+            return res.status(400).send('Missing title, content, or category');
         }
 
-        await db.query(
+        const cleanTitle = title.trim();
+        const cleanContent = content.trim();
+        const cleanCategory = category.trim();
+        const cleanImage = image && image.trim() ? image.trim() : null;
+        const embedVideo = convertYouTubeUrlToEmbed(video);
+
+        const [result] = await db.query(
             `
             INSERT INTO posts 
             (title, content, category, image, video, user_id, likes, rating, views) 
             VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0)
             `,
             [
-                title.trim(),
-                content.trim(),
-                category.trim(),
-                image || null,
-                video || null,
-                user_id
+                cleanTitle,
+                cleanContent,
+                cleanCategory,
+                cleanImage,
+                embedVideo,
+                userId
             ]
         );
 
-        res.redirect('/posts');
+        console.log('POST CREATED ID:', result.insertId);
+
+        res.redirect(`/posts/${result.insertId}`);
+
     } catch (err) {
-        console.error(err);
-        res.status(500).send('Server Error');
+        console.error('CREATE POST ERROR:', err);
+        res.status(500).send('Server Error while creating post');
     }
 });
 
-// ======================
-// SAVE / UNSAVE A POST
-// ======================
+/* =========================================================
+   SAVE / UNSAVE A POST
+========================================================= */
 router.post('/:id/save', async (req, res) => {
     try {
         if (!req.session.user) {
@@ -290,15 +365,16 @@ router.post('/:id/save', async (req, res) => {
         }
 
         res.redirect(`/posts/${postId}`);
+
     } catch (err) {
-        console.error(err);
+        console.error('SAVE POST ERROR:', err);
         res.status(500).send('Server Error');
     }
 });
 
-// ======================
-// FOLLOW / UNFOLLOW POST CREATOR
-// ======================
+/* =========================================================
+   FOLLOW / UNFOLLOW POST CREATOR
+========================================================= */
 router.post('/:id/follow-creator', async (req, res) => {
     try {
         if (!req.session.user) {
@@ -352,15 +428,16 @@ router.post('/:id/follow-creator', async (req, res) => {
         }
 
         res.redirect(`/posts/${postId}`);
+
     } catch (err) {
-        console.error(err);
+        console.error('FOLLOW CREATOR ERROR:', err);
         res.status(500).send('Server Error');
     }
 });
 
-// ======================
-// DETAIL PAGE
-// ======================
+/* =========================================================
+   DETAIL PAGE
+========================================================= */
 router.get('/:id', async (req, res) => {
     try {
         const postId = req.params.id;
@@ -400,6 +477,7 @@ router.get('/:id', async (req, res) => {
                 ) AS is_following
 
             FROM posts
+
             JOIN users ON posts.user_id = users.id
 
             LEFT JOIN (
@@ -452,7 +530,9 @@ router.get('/:id', async (req, res) => {
                 comments.created_at,
                 users.username
             FROM comments
+
             JOIN users ON comments.user_id = users.id
+
             WHERE comments.post_id = ?
             ORDER BY comments.created_at ASC
             `,
@@ -511,7 +591,7 @@ router.get('/:id', async (req, res) => {
                 funny: 0
             },
             hasReported: reportedSet.has(comment.id),
-            isOwner: req.session.user && req.session.user.id === comment.user_id
+            isOwner: req.session.user && Number(req.session.user.id) === Number(comment.user_id)
         }));
 
         const commentTree = buildCommentTree(comments);
@@ -523,15 +603,16 @@ router.get('/:id', async (req, res) => {
             user: req.session.user || null,
             currentUser: req.session.user || null
         });
+
     } catch (err) {
-        console.error(err);
+        console.error('POST DETAIL ERROR:', err);
         res.status(500).send('Server Error');
     }
 });
 
-// ======================
-// LIKE A POST
-// ======================
+/* =========================================================
+   LIKE A POST
+========================================================= */
 router.get('/:id/like', async (req, res) => {
     try {
         if (!req.session.user) {
@@ -544,15 +625,16 @@ router.get('/:id/like', async (req, res) => {
         );
 
         res.redirect('/posts/' + req.params.id);
+
     } catch (err) {
-        console.error(err);
+        console.error('LIKE POST ERROR:', err);
         res.status(500).send('Server Error');
     }
 });
 
-// ======================
-// RATE A POST
-// ======================
+/* =========================================================
+   RATE A POST
+========================================================= */
 router.post('/:id/rate', async (req, res) => {
     try {
         if (!req.session.user) {
@@ -571,15 +653,16 @@ router.post('/:id/rate', async (req, res) => {
         );
 
         res.redirect('/posts/' + req.params.id);
+
     } catch (err) {
-        console.error(err);
+        console.error('RATE POST ERROR:', err);
         res.status(500).send('Server Error');
     }
 });
 
-// ======================
-// ADD TOP-LEVEL COMMENT
-// ======================
+/* =========================================================
+   ADD TOP-LEVEL COMMENT
+========================================================= */
 router.post('/:id/comment', async (req, res) => {
     try {
         if (!req.session.user) {
@@ -587,11 +670,11 @@ router.post('/:id/comment', async (req, res) => {
         }
 
         const content = req.body.content;
-        const user_id = req.session.user.id;
-        const post_id = req.params.id;
+        const userId = req.session.user.id;
+        const postId = req.params.id;
 
         if (!content || !content.trim()) {
-            return res.redirect('/posts/' + post_id);
+            return res.redirect('/posts/' + postId);
         }
 
         await db.query(
@@ -600,19 +683,20 @@ router.post('/:id/comment', async (req, res) => {
             (post_id, user_id, comment, parent_id) 
             VALUES (?, ?, ?, NULL)
             `,
-            [post_id, user_id, content.trim()]
+            [postId, userId, content.trim()]
         );
 
-        res.redirect('/posts/' + post_id);
+        res.redirect('/posts/' + postId);
+
     } catch (err) {
-        console.error(err);
+        console.error('ADD COMMENT ERROR:', err);
         res.status(500).send('Server Error');
     }
 });
 
-// ======================
-// REPLY TO COMMENT
-// ======================
+/* =========================================================
+   REPLY TO COMMENT
+========================================================= */
 router.post('/:id/comment/:commentId/reply', async (req, res) => {
     try {
         if (!req.session.user) {
@@ -620,20 +704,20 @@ router.post('/:id/comment/:commentId/reply', async (req, res) => {
         }
 
         const content = req.body.content;
-        const user_id = req.session.user.id;
-        const post_id = req.params.id;
-        const parent_id = req.params.commentId;
+        const userId = req.session.user.id;
+        const postId = req.params.id;
+        const parentId = req.params.commentId;
 
         if (!content || !content.trim()) {
-            return res.redirect('/posts/' + post_id);
+            return res.redirect('/posts/' + postId);
         }
 
         const [parentRows] = await db.query(
             'SELECT id, post_id FROM comments WHERE id = ?',
-            [parent_id]
+            [parentId]
         );
 
-        if (!parentRows.length || Number(parentRows[0].post_id) !== Number(post_id)) {
+        if (!parentRows.length || Number(parentRows[0].post_id) !== Number(postId)) {
             return res.status(404).send('Parent comment not found');
         }
 
@@ -643,19 +727,20 @@ router.post('/:id/comment/:commentId/reply', async (req, res) => {
             (post_id, user_id, comment, parent_id) 
             VALUES (?, ?, ?, ?)
             `,
-            [post_id, user_id, content.trim(), parent_id]
+            [postId, userId, content.trim(), parentId]
         );
 
-        res.redirect(`/posts/${post_id}#comment-${parent_id}`);
+        res.redirect(`/posts/${postId}#comment-${parentId}`);
+
     } catch (err) {
-        console.error(err);
+        console.error('REPLY COMMENT ERROR:', err);
         res.status(500).send('Server Error');
     }
 });
 
-// ======================
-// REACT TO COMMENT
-// ======================
+/* =========================================================
+   REACT TO COMMENT
+========================================================= */
 router.post('/comments/:commentId/react', async (req, res) => {
     try {
         if (!req.session.user) {
@@ -721,15 +806,16 @@ router.post('/comments/:commentId/react', async (req, res) => {
         }
 
         res.redirect(`/posts/${postId}#comment-${commentId}`);
+
     } catch (err) {
-        console.error(err);
+        console.error('REACT COMMENT ERROR:', err);
         res.status(500).send('Server Error');
     }
 });
 
-// ======================
-// REPORT COMMENT
-// ======================
+/* =========================================================
+   REPORT COMMENT
+========================================================= */
 router.post('/comments/:commentId/report', async (req, res) => {
     try {
         if (!req.session.user) {
@@ -760,15 +846,16 @@ router.post('/comments/:commentId/report', async (req, res) => {
         );
 
         res.redirect(`/posts/${postId}#comment-${commentId}`);
+
     } catch (err) {
-        console.error(err);
+        console.error('REPORT COMMENT ERROR:', err);
         res.status(500).send('Server Error');
     }
 });
 
-// ======================
-// DELETE OWN COMMENT
-// ======================
+/* =========================================================
+   DELETE OWN COMMENT
+========================================================= */
 router.post('/comments/:commentId/delete', async (req, res) => {
     try {
         if (!req.session.user) {
@@ -799,8 +886,9 @@ router.post('/comments/:commentId/delete', async (req, res) => {
         );
 
         res.redirect(`/posts/${comment.post_id}`);
+
     } catch (err) {
-        console.error(err);
+        console.error('DELETE COMMENT ERROR:', err);
         res.status(500).send('Server Error');
     }
 });

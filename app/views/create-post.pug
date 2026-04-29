@@ -1,39 +1,65 @@
 extends layout
 
 block content
-  .card
-    h2 ✍️ Create New Post
+  .profile-page
+    .profile-card
+      .profile-card-head
+        div
+          h2 ✍️ Create New Post
+          p.profile-muted Share a gaming tip, guide, review, trick, or tutorial with the community.
 
-    form(action="/posts/create" method="POST" enctype="multipart/form-data")
-      div(style="margin-bottom:16px;")
-        label Title
-        br
-        input(type="text" name="title" placeholder="Post title..." required style="width:100%; padding:8px; margin-top:4px;")
+      form.profile-edit-form(action="/posts/create", method="POST")
+        .profile-form-grid
+          .form-group.full
+            label(for="title") Title
+            input(
+              type="text"
+              id="title"
+              name="title"
+              placeholder="Example: Best Valorant aim tips for beginners"
+              required
+            )
 
-      div(style="margin-bottom:16px;")
-        label Category
-        br
-        select(name="category" style="width:100%; padding:8px; margin-top:4px;")
-          option(value="FPS") FPS
-          option(value="RPG") RPG
-          option(value="Tips") Tips
-          option(value="Mobile") Mobile
-          option(value="Indie") Indie
-          option(value="Other") Other
+          .form-group
+            label(for="category") Category
+            select(id="category", name="category", required)
+              option(value="FPS") FPS
+              option(value="RPG") RPG
+              option(value="Tips") Tips
+              option(value="Guide") Guide
+              option(value="Review") Review
+              option(value="Mobile") Mobile
+              option(value="Indie") Indie
+              option(value="Other") Other
 
-      div(style="margin-bottom:16px;")
-        label Upload Image
-        br
-        input(type="file" name="image" accept="image/*" style="width:100%; padding:8px; margin-top:4px;")
+          .form-group
+            label(for="image") Image URL
+            input(
+              type="url"
+              id="image"
+              name="image"
+              placeholder="https://example.com/image.jpg"
+            )
 
-      div(style="margin-bottom:16px;")
-        label Video URL (optional)
-        br
-        input(type="text" name="video" placeholder="https://www.youtube.com/embed/..." style="width:100%; padding:8px; margin-top:4px;")
+          .form-group.full
+            label(for="video") YouTube Video URL
+            input(
+              type="url"
+              id="video"
+              name="video"
+              placeholder="https://www.youtube.com/watch?v=VIDEO_ID"
+            )
+            small You can paste a normal YouTube link. The app will convert it to an embed link automatically.
 
-      div(style="margin-bottom:16px;")
-        label Content
-        br
-        textarea(name="content" rows="6" placeholder="Write your post..." required style="width:100%; padding:8px; margin-top:4px;")
+          .form-group.full
+            label(for="content") Content
+            textarea(
+              id="content"
+              name="content"
+              rows="8"
+              placeholder="Write your gaming post, tip, walkthrough, or strategy..."
+              required
+            )
 
-      button(type="submit" style="padding:10px 24px;") 🚀 Publish Post
+        .profile-form-actions
+          button.profile-action-btn(type="submit") 🚀 Publish Post
