@@ -844,13 +844,16 @@ app.get('/', async (req, res) => {
             `
         );
 
-        const [featuredVideoRows] = await db.query(
+        const [featuredVideos] = await db.query(
             `
             SELECT
                 posts.*,
                 users.username,
 
                 COALESCE(comment_counts.total_comments, 0) AS comment_count,
+                COALESCE(comment_counts.total_comments, 0) AS comments_count,
+                COALESCE(comment_counts.total_comments, 0) AS total_comments,
+
                 COALESCE(save_counts.total_saves, 0) AS save_count
 
             FROM posts
@@ -869,13 +872,15 @@ app.get('/', async (req, res) => {
                 GROUP BY post_id
             ) AS save_counts ON save_counts.post_id = posts.id
 
-            WHERE posts.video IS NOT NULL AND posts.video <> ''
+            WHERE posts.video IS NOT NULL 
+            AND posts.video <> ''
+
             ORDER BY posts.views DESC, posts.likes DESC, posts.id DESC
-            LIMIT 1
+            LIMIT 6
             `
         );
 
-        const featuredVideo = featuredVideoRows.length ? featuredVideoRows[0] : null;
+        const featuredVideo = featuredVideos.length ? featuredVideos[0] : null;
 
         res.render('home', {
             stats,
@@ -886,6 +891,7 @@ app.get('/', async (req, res) => {
             topCreators,
             recentDiscussions,
             featuredVideo,
+            featuredVideos,
             user: req.session.user || null,
             currentUser: req.session.user || null
         });

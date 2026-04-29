@@ -5,7 +5,12 @@ mixin miniPostCard(post)
   - const comments = Number(post.comment_count || post.comments_count || post.total_comments || 0)
   - const likes = Number(post.likes || 0)
   - const views = Number(post.views || 0)
+  - const saves = Number(post.save_count || 0)
   - const rating = post.rating ? Number(post.rating).toFixed(1) : '0.0'
+  - const postType = post.post_type || post.type || 'Post'
+  - const difficulty = post.difficulty || 'General'
+  - const readTime = post.read_time || post.estimated_read_time || null
+  - const excerpt = post.content && post.content.length > 110 ? post.content.substring(0, 110) + '...' : (post.content || 'No description yet.')
 
   article.home-post-card
     a.home-post-image(href=`/posts/${post.id}`)
@@ -19,12 +24,19 @@ mixin miniPostCard(post)
       h3
         a(href=`/posts/${post.id}`)= post.title
 
-      p= post.content && post.content.length > 110 ? post.content.substring(0, 110) + '...' : post.content
+      .tag-chip-row(style="margin: 0 0 12px;")
+        span.tag-chip= postType
+        span.tag-chip= difficulty
+        if readTime
+          span.tag-chip #{readTime} min read
+
+      p= excerpt
 
       .home-post-stats
         span 💜 #{likes}
         span 👁 #{views}
         span 💬 #{comments}
+        span 💾 #{saves}
 
       .home-post-author
         span By #{post.username || 'Unknown'}
@@ -39,7 +51,9 @@ block content
   - const safeGames = typeof popularGames !== 'undefined' && popularGames ? popularGames : []
   - const safeCreators = typeof topCreators !== 'undefined' && topCreators ? topCreators : []
   - const safeDiscussions = typeof recentDiscussions !== 'undefined' && recentDiscussions ? recentDiscussions : []
-  - const videoPost = typeof featuredVideo !== 'undefined' ? featuredVideo : null
+  - const safeFeaturedVideos = typeof featuredVideos !== 'undefined' && featuredVideos ? featuredVideos : []
+  - const fallbackFeaturedVideo = typeof featuredVideo !== 'undefined' && featuredVideo ? featuredVideo : null
+  - const videoPosts = safeFeaturedVideos.length ? safeFeaturedVideos : (fallbackFeaturedVideo ? [fallbackFeaturedVideo] : [])
 
   .home-page
     section.home-hero
@@ -51,6 +65,7 @@ block content
 
         .home-hero-actions
           a.home-primary-btn(href="/posts") Browse Posts
+
           if currentUser
             a.home-secondary-btn(href="/posts/create") Create Post
             a.home-secondary-btn(href="/posts/saved") Saved Posts
@@ -92,6 +107,7 @@ block content
             .home-empty-card
               h3 No trending posts yet
               p Create the first post and start the community activity.
+              a.home-primary-btn(href="/posts/create") Create Post
 
         section.home-section
           .home-section-head
@@ -114,7 +130,7 @@ block content
             div
               span.home-section-kicker 📘 Latest Guides
               h2 Fresh Tips and Guides
-            a.home-view-link(href="/posts?category=Guide") More guides
+            a.home-view-link(href="/posts?type=Guide") More guides
 
           if safeGuides.length
             .home-post-grid
@@ -123,34 +139,64 @@ block content
           else
             .home-empty-card
               h3 No guides yet
-              p Add posts under Guide, Tips, Tricks, or Review to show them here.
+              p Add posts under Guide, Tip, Trick, or Review to show them here.
+              a.home-primary-btn(href="/posts/create") Create Guide
 
-        if videoPost
-          section.home-section
-            .home-section-head
-              div
-                span.home-section-kicker 🎥 Featured Video Post
-                h2= videoPost.title
-              a.home-view-link(href=`/posts/${videoPost.id}`) Open post
+        section.home-section
+          .home-section-head
+            div
+              span.home-section-kicker 🎥 Featured Video Posts
+              h2 Watch Community Videos
+            a.home-view-link(href="/posts?type=Video") View videos
 
-            .home-featured-video-card
-              .home-video-frame
-                iframe(
-                  src=videoPost.video
-                  title=videoPost.title
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowfullscreen
-                )
+          if videoPosts.length
+            .professional-post-list
+              each videoPost in videoPosts
+                - const videoExcerpt = videoPost.content && videoPost.content.length > 180 ? videoPost.content.substring(0, 180) + '...' : (videoPost.content || 'Watch this community video post.')
+                - const videoComments = Number(videoPost.comment_count || videoPost.comments_count || videoPost.total_comments || 0)
+                - const videoLikes = Number(videoPost.likes || 0)
+                - const videoViews = Number(videoPost.views || 0)
+                - const videoSaves = Number(videoPost.save_count || 0)
+                - const videoType = videoPost.post_type || videoPost.type || 'Video'
+                - const videoDifficulty = videoPost.difficulty || 'General'
+                - const videoReadTime = videoPost.read_time || videoPost.estimated_read_time || null
 
-              .home-video-copy
-                span.home-category-pill= videoPost.category || 'Gaming'
-                h3= videoPost.title
-                p= videoPost.content && videoPost.content.length > 180 ? videoPost.content.substring(0, 180) + '...' : videoPost.content
-                a.home-primary-btn(href=`/posts/${videoPost.id}`) Watch and Read
+                .home-featured-video-card
+                  .home-video-frame
+                    iframe(
+                      src=videoPost.video
+                      title=videoPost.title
+                      frameborder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowfullscreen
+                    )
+
+                  .home-video-copy
+                    span.home-category-pill= videoPost.category || 'Gaming'
+                    h3= videoPost.title
+                    p= videoExcerpt
+
+                    .home-post-stats
+                      span 👁 #{videoViews}
+                      span 💜 #{videoLikes}
+                      span 💾 #{videoSaves}
+                      span 💬 #{videoComments}
+                      span= videoType
+                      span= videoDifficulty
+                      if videoReadTime
+                        span #{videoReadTime} min read
+
+                    a.home-primary-btn(href=`/posts/${videoPost.id}`) Watch and Read
+          else
+            .home-empty-card
+              h3 No video posts yet
+              p Share a post with a YouTube video to appear here.
+              a.home-primary-btn(href="/posts/create") Create Video Post
 
       aside.home-sidebar
         .home-side-card
           h3 🎮 Popular Games
+
           if safeGames.length
             .home-game-list
               each game in safeGames
@@ -162,10 +208,12 @@ block content
 
         .home-side-card
           h3 👑 Top Creators
+
           if safeCreators.length
             .home-creator-list
               each creator, index in safeCreators
                 - const initial = creator.username ? creator.username.charAt(0).toUpperCase() : 'U'
+
                 a.home-creator-row(href=`/users/${creator.id}`)
                   .home-creator-left
                     if creator.avatar_url
@@ -183,6 +231,7 @@ block content
 
         .home-side-card
           h3 💬 Recent Discussions
+
           if safeDiscussions.length
             .home-discussion-list
               each item in safeDiscussions
@@ -196,6 +245,7 @@ block content
         .home-side-card.home-cta-card
           h3 Ready to share a trick?
           p.home-muted Post your best gaming guide, hidden trick, review, or walkthrough.
+
           if currentUser
             a.home-primary-btn(href="/posts/create") Create Post
           else

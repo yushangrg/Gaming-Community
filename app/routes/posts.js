@@ -258,8 +258,21 @@ router.get('/', async (req, res) => {
         }
 
         if (postType) {
-            query += ' AND posts.post_type = ?';
-            params.push(postType);
+            if (postType === 'Video') {
+                query += `
+                    AND (
+                        posts.post_type = ?
+                        OR (
+                            posts.video IS NOT NULL
+                            AND posts.video <> ''
+                        )
+                    )
+                `;
+                params.push(postType);
+            } else {
+                query += ' AND posts.post_type = ?';
+                params.push(postType);
+            }
         }
 
         if (difficulty) {
@@ -273,8 +286,22 @@ router.get('/', async (req, res) => {
         }
 
         if (search) {
-            query += ' AND (posts.title LIKE ? OR posts.content LIKE ? OR posts.category LIKE ?)';
-            params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+            query += `
+                AND (
+                    posts.title LIKE ?
+                    OR posts.content LIKE ?
+                    OR posts.category LIKE ?
+                    OR posts.post_type LIKE ?
+                    OR posts.difficulty LIKE ?
+                )
+            `;
+            params.push(
+                `%${search}%`,
+                `%${search}%`,
+                `%${search}%`,
+                `%${search}%`,
+                `%${search}%`
+            );
         }
 
         if (userFilter) {
@@ -299,9 +326,11 @@ router.get('/', async (req, res) => {
             selectedUser: userFilter,
             selectedType: postType,
             selectedDifficulty: difficulty,
+            postType,
+            difficulty,
             postTypes: ALLOWED_POST_TYPES,
             difficulties: ALLOWED_DIFFICULTIES,
-            pageTitle: 'Posts',
+            pageTitle: postType ? `${postType} Posts` : 'Posts',
             user: req.session.user || null,
             currentUser: req.session.user || null
         });
@@ -365,6 +394,8 @@ router.get('/saved', async (req, res) => {
             selectedUser: '',
             selectedType: '',
             selectedDifficulty: '',
+            postType: '',
+            difficulty: '',
             postTypes: ALLOWED_POST_TYPES,
             difficulties: ALLOWED_DIFFICULTIES,
             pageTitle: 'Saved Posts',
@@ -425,15 +456,20 @@ router.post('/create', uploadSingleImage, async (req, res) => {
             return res.status(400).send('Missing title, content, or category');
         }
 
-        const finalPostType = normalizePostType(post_type);
+        const embedVideo = convertYouTubeUrlToEmbed(video);
+
+        let finalPostType = normalizePostType(post_type);
+
+        if (embedVideo && (!post_type || post_type.trim() === '')) {
+            finalPostType = 'Video';
+        }
+
         const finalDifficulty = normalizeDifficulty(difficulty);
         const readTime = calculateReadTime(content);
 
         const uploadedImagePath = req.file ? `/uploads/${req.file.filename}` : null;
         const imageUrl = image_url && image_url.trim() ? image_url.trim() : null;
         const finalImage = uploadedImagePath || imageUrl;
-
-        const embedVideo = convertYouTubeUrlToEmbed(video);
 
         const [result] = await db.query(
             `
@@ -565,15 +601,20 @@ router.post('/:id/edit', uploadSingleImage, async (req, res) => {
             return res.status(403).send('You can only edit your own posts');
         }
 
-        const finalPostType = normalizePostType(post_type);
+        const embedVideo = convertYouTubeUrlToEmbed(video);
+
+        let finalPostType = normalizePostType(post_type);
+
+        if (embedVideo && (!post_type || post_type.trim() === '')) {
+            finalPostType = 'Video';
+        }
+
         const finalDifficulty = normalizeDifficulty(difficulty);
         const readTime = calculateReadTime(content);
 
         const uploadedImagePath = req.file ? `/uploads/${req.file.filename}` : null;
         const imageUrl = image_url && image_url.trim() ? image_url.trim() : null;
         const finalImage = uploadedImagePath || imageUrl || post.image;
-
-        const embedVideo = convertYouTubeUrlToEmbed(video);
 
         if (uploadedImagePath && post.image && post.image.startsWith('/uploads/')) {
             deleteUploadedImage(post.image);
