@@ -14,6 +14,89 @@ const { getUnreadNotificationCount } = require('./services/notifications');
 const app = express();
 
 /* =========================================================
+   PROFILE POINTS / LEVEL HELPERS
+========================================================= */
+function calculateProfilePoints(stats) {
+    const postCount = Number(stats.postCount || 0);
+    const totalLikes = Number(stats.totalLikes || 0);
+    const followersCount = Number(stats.followersCount || stats.followerCount || 0);
+    const commentsCount = Number(stats.commentsCount || 0);
+    const savesReceivedCount = Number(stats.savesReceivedCount || 0);
+
+    return (
+        (postCount * 25) +
+        (totalLikes * 5) +
+        (savesReceivedCount * 10) +
+        (followersCount * 15) +
+        (commentsCount * 3)
+    );
+}
+
+function getUserLevel(points) {
+    const safePoints = Number(points || 0);
+    const level = Math.min(10, Math.max(1, Math.floor(safePoints / 100) + 1));
+
+    const levelNames = {
+        1: 'Rookie',
+        2: 'Scout',
+        3: 'Gamer',
+        4: 'Grinder',
+        5: 'Strategist',
+        6: 'Expert',
+        7: 'Elite',
+        8: 'Master',
+        9: 'Legend',
+        10: 'Pro Creator'
+    };
+
+    return {
+        level,
+        name: levelNames[level],
+        label: `Level ${level} ${levelNames[level]}`
+    };
+}
+
+function getRankProgress(points) {
+    const safePoints = Number(points || 0);
+
+    if (safePoints >= 900) {
+        return 100;
+    }
+
+    return safePoints % 100;
+}
+
+function getUserBadges(stats, user) {
+    const badges = [];
+
+    if (Number(stats.postCount || 0) <= 1) {
+        badges.push('New Member');
+    }
+
+    if (Number(stats.postCount || 0) >= 3) {
+        badges.push('Guide Creator');
+    }
+
+    if (Number(stats.commentsCount || 0) >= 10) {
+        badges.push('Helpful Gamer');
+    }
+
+    if (Number(stats.followersCount || stats.followerCount || 0) >= 5) {
+        badges.push('Popular Creator');
+    }
+
+    if (Number(stats.points || 0) >= 300) {
+        badges.push('Top Contributor');
+    }
+
+    if (user && user.is_verified) {
+        badges.push('Verified Creator');
+    }
+
+    return badges;
+}
+
+/* =========================================================
    VIEW ENGINE
 ========================================================= */
 app.set('view engine', 'pug');
@@ -97,18 +180,31 @@ app.get('/saved', (req, res) => {
 app.get('/profile', async (req, res) => {
     try {
         if (!req.session.user) {
+            const emptyRank = getUserLevel(0);
+
             return res.render('profile', {
                 user: null,
                 currentUser: null,
                 posts: [],
+                bestPosts: [],
+                recentActivity: [],
+                favoriteGames: [],
+                badges: [],
                 stats: {
                     postCount: 0,
-                    points: 0,
-                    totalViews: 0,
                     totalLikes: 0,
+                    totalViews: 0,
+                    followersCount: 0,
                     followerCount: 0,
                     followingCount: 0,
-                    savedCount: 0
+                    savedPostsCount: 0,
+                    savedCount: 0,
+                    savesReceivedCount: 0,
+                    commentsCount: 0,
+                    commentsReceivedCount: 0,
+                    points: 0,
+                    rank: emptyRank,
+                    rankProgress: 0
                 }
             });
         }
@@ -126,6 +222,12 @@ app.get('/profile', async (req, res) => {
                 users.location,
                 users.favorite_game,
                 users.website,
+                users.joined_at,
+                users.twitter_url,
+                users.youtube_url,
+                users.twitch_url,
+                users.discord_name,
+                users.is_verified,
 
                 COALESCE(follower_counts.total_followers, 0) AS follower_count,
                 COALESCE(following_counts.total_following, 0) AS following_count
@@ -152,18 +254,31 @@ app.get('/profile', async (req, res) => {
         if (!users.length) {
             req.session.destroy(() => {});
 
+            const emptyRank = getUserLevel(0);
+
             return res.render('profile', {
                 user: null,
                 currentUser: null,
                 posts: [],
+                bestPosts: [],
+                recentActivity: [],
+                favoriteGames: [],
+                badges: [],
                 stats: {
                     postCount: 0,
-                    points: 0,
-                    totalViews: 0,
                     totalLikes: 0,
+                    totalViews: 0,
+                    followersCount: 0,
                     followerCount: 0,
                     followingCount: 0,
-                    savedCount: 0
+                    savedPostsCount: 0,
+                    savedCount: 0,
+                    savesReceivedCount: 0,
+                    commentsCount: 0,
+                    commentsReceivedCount: 0,
+                    points: 0,
+                    rank: emptyRank,
+                    rankProgress: 0
                 }
             });
         }
@@ -211,45 +326,212 @@ app.get('/profile', async (req, res) => {
         const [statsRows] = await db.query(
             `
             SELECT
-                COUNT(*) AS postCount,
-                COALESCE(SUM(likes), 0) AS totalLikes,
-                COALESCE(SUM(views), 0) AS totalViews
-            FROM posts
-            WHERE user_id = ?
+                COALESCE(post_stats.postCount, 0) AS postCount,
+                COALESCE(post_stats.totalLikes, 0) AS totalLikes,
+                COALESCE(post_stats.totalViews, 0) AS totalViews,
+
+                COALESCE(follower_stats.followersCount, 0) AS followersCount,
+                COALESCE(following_stats.followingCount, 0) AS followingCount,
+
+                COALESCE(saved_by_user_stats.savedPostsCount, 0) AS savedPostsCount,
+                COALESCE(saves_received_stats.savesReceivedCount, 0) AS savesReceivedCount,
+
+                COALESCE(comment_stats.commentsCount, 0) AS commentsCount,
+                COALESCE(received_comment_stats.commentsReceivedCount, 0) AS commentsReceivedCount
+
+            FROM users
+
+            LEFT JOIN (
+                SELECT 
+                    user_id,
+                    COUNT(*) AS postCount,
+                    COALESCE(SUM(likes), 0) AS totalLikes,
+                    COALESCE(SUM(views), 0) AS totalViews
+                FROM posts
+                GROUP BY user_id
+            ) AS post_stats ON post_stats.user_id = users.id
+
+            LEFT JOIN (
+                SELECT following_id, COUNT(*) AS followersCount
+                FROM user_follows
+                GROUP BY following_id
+            ) AS follower_stats ON follower_stats.following_id = users.id
+
+            LEFT JOIN (
+                SELECT follower_id, COUNT(*) AS followingCount
+                FROM user_follows
+                GROUP BY follower_id
+            ) AS following_stats ON following_stats.follower_id = users.id
+
+            LEFT JOIN (
+                SELECT user_id, COUNT(*) AS savedPostsCount
+                FROM saved_posts
+                GROUP BY user_id
+            ) AS saved_by_user_stats ON saved_by_user_stats.user_id = users.id
+
+            LEFT JOIN (
+                SELECT posts.user_id, COUNT(saved_posts.post_id) AS savesReceivedCount
+                FROM posts
+                LEFT JOIN saved_posts ON saved_posts.post_id = posts.id
+                GROUP BY posts.user_id
+            ) AS saves_received_stats ON saves_received_stats.user_id = users.id
+
+            LEFT JOIN (
+                SELECT user_id, COUNT(*) AS commentsCount
+                FROM comments
+                GROUP BY user_id
+            ) AS comment_stats ON comment_stats.user_id = users.id
+
+            LEFT JOIN (
+                SELECT posts.user_id, COUNT(comments.id) AS commentsReceivedCount
+                FROM posts
+                LEFT JOIN comments ON comments.post_id = posts.id
+                GROUP BY posts.user_id
+            ) AS received_comment_stats ON received_comment_stats.user_id = users.id
+
+            WHERE users.id = ?
             `,
             [userId]
         );
 
-        const [savedRows] = await db.query(
-            `
-            SELECT COUNT(*) AS savedCount
-            FROM saved_posts
-            WHERE user_id = ?
-            `,
-            [userId]
-        );
+        const baseStats = {
+            postCount: Number(statsRows[0].postCount || 0),
+            totalLikes: Number(statsRows[0].totalLikes || 0),
+            totalViews: Number(statsRows[0].totalViews || 0),
 
-        const postCount = Number(statsRows[0].postCount || 0);
-        const totalLikes = Number(statsRows[0].totalLikes || 0);
-        const totalViews = Number(statsRows[0].totalViews || 0);
-        const followerCount = Number(profileUser.follower_count || 0);
-        const followingCount = Number(profileUser.following_count || 0);
-        const savedCount = Number(savedRows[0].savedCount || 0);
+            followersCount: Number(statsRows[0].followersCount || 0),
+            followerCount: Number(statsRows[0].followersCount || 0),
+            followingCount: Number(statsRows[0].followingCount || 0),
+
+            savedPostsCount: Number(statsRows[0].savedPostsCount || 0),
+            savedCount: Number(statsRows[0].savedPostsCount || 0),
+            savesReceivedCount: Number(statsRows[0].savesReceivedCount || 0),
+
+            commentsCount: Number(statsRows[0].commentsCount || 0),
+            commentsReceivedCount: Number(statsRows[0].commentsReceivedCount || 0)
+        };
+
+        const points = calculateProfilePoints(baseStats);
+        const rank = getUserLevel(points);
+        const rankProgress = getRankProgress(points);
 
         const stats = {
-            postCount,
-            totalLikes,
-            totalViews,
-            followerCount,
-            followingCount,
-            savedCount,
-            points: (postCount * 25) + (totalLikes * 5)
+            ...baseStats,
+            points,
+            rank,
+            rankProgress
         };
+
+        const badges = getUserBadges(stats, profileUser);
+
+        const [bestPosts] = await db.query(
+            `
+            SELECT 
+                posts.*,
+
+                COALESCE(comment_counts.total_comments, 0) AS comment_count,
+                COALESCE(comment_counts.total_comments, 0) AS comments_count,
+                COALESCE(comment_counts.total_comments, 0) AS total_comments,
+
+                COALESCE(save_counts.total_saves, 0) AS save_count,
+
+                (
+                    (COALESCE(posts.likes, 0) * 5) +
+                    (COALESCE(posts.views, 0) * 1) +
+                    (COALESCE(save_counts.total_saves, 0) * 10) +
+                    (COALESCE(comment_counts.total_comments, 0) * 3)
+                ) AS post_score
+
+            FROM posts
+
+            LEFT JOIN (
+                SELECT post_id, COUNT(*) AS total_comments
+                FROM comments
+                GROUP BY post_id
+            ) AS comment_counts ON comment_counts.post_id = posts.id
+
+            LEFT JOIN (
+                SELECT post_id, COUNT(*) AS total_saves
+                FROM saved_posts
+                GROUP BY post_id
+            ) AS save_counts ON save_counts.post_id = posts.id
+
+            WHERE posts.user_id = ?
+            ORDER BY post_score DESC, posts.id DESC
+            LIMIT 5
+            `,
+            [userId]
+        );
+
+        const [recentActivity] = await db.query(
+            `
+            SELECT *
+            FROM (
+                SELECT 
+                    'post' AS activity_type,
+                    title AS activity_text,
+                    CONCAT('/posts/', id) AS activity_link,
+                    created_at AS activity_date
+                FROM posts
+                WHERE user_id = ?
+
+                UNION ALL
+
+                SELECT 
+                    'comment' AS activity_type,
+                    comment AS activity_text,
+                    CONCAT('/posts/', post_id, '#comment-', id) AS activity_link,
+                    created_at AS activity_date
+                FROM comments
+                WHERE user_id = ?
+            ) AS activity
+            ORDER BY activity_date DESC
+            LIMIT 8
+            `,
+            [userId, userId]
+        );
+
+        const [favoriteGames] = await db.query(
+            `
+            SELECT 
+                category AS name,
+                COUNT(*) AS total
+            FROM posts
+            WHERE user_id = ?
+            AND category IS NOT NULL
+            AND category <> ''
+            GROUP BY category
+            ORDER BY total DESC, category ASC
+            LIMIT 6
+            `,
+            [userId]
+        );
+
+        profileUser.followersCount = stats.followersCount;
+        profileUser.followerCount = stats.followerCount;
+        profileUser.followingCount = stats.followingCount;
+        profileUser.savedPostsCount = stats.savedPostsCount;
+        profileUser.savedCount = stats.savedCount;
+        profileUser.savesReceivedCount = stats.savesReceivedCount;
+        profileUser.commentsCount = stats.commentsCount;
+        profileUser.commentsReceivedCount = stats.commentsReceivedCount;
+        profileUser.totalLikes = stats.totalLikes;
+        profileUser.totalViews = stats.totalViews;
+        profileUser.postCount = stats.postCount;
+        profileUser.points = points;
+        profileUser.rank = rank;
+        profileUser.rankLabel = rank.label;
+        profileUser.rankProgress = rankProgress;
+        profileUser.badges = badges;
 
         res.render('profile', {
             user: profileUser,
             currentUser: req.session.user || null,
             posts,
+            bestPosts,
+            recentActivity,
+            favoriteGames,
+            badges,
             stats
         });
 
@@ -277,7 +559,11 @@ app.post('/profile/update', async (req, res) => {
             bio,
             location,
             favorite_game,
-            website
+            website,
+            twitter_url,
+            youtube_url,
+            twitch_url,
+            discord_name
         } = req.body;
 
         if (!username || !email) {
@@ -294,7 +580,11 @@ app.post('/profile/update', async (req, res) => {
                 bio = ?,
                 location = ?,
                 favorite_game = ?,
-                website = ?
+                website = ?,
+                twitter_url = ?,
+                youtube_url = ?,
+                twitch_url = ?,
+                discord_name = ?
             WHERE id = ?
             `,
             [
@@ -305,6 +595,10 @@ app.post('/profile/update', async (req, res) => {
                 location && location.trim() ? location.trim() : null,
                 favorite_game && favorite_game.trim() ? favorite_game.trim() : null,
                 website && website.trim() ? website.trim() : null,
+                twitter_url && twitter_url.trim() ? twitter_url.trim() : null,
+                youtube_url && youtube_url.trim() ? youtube_url.trim() : null,
+                twitch_url && twitch_url.trim() ? twitch_url.trim() : null,
+                discord_name && discord_name.trim() ? discord_name.trim() : null,
                 userId
             ]
         );
