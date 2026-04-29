@@ -221,12 +221,23 @@ router.get('/', async (req, res) => {
 
                 COALESCE(save_counts.total_saves, 0) AS save_count,
 
+                COALESCE(feedback_counts.helpful_count, 0) AS helpful_count,
+                COALESCE(feedback_counts.not_helpful_count, 0) AS not_helpful_count,
+
                 EXISTS (
                     SELECT 1
                     FROM saved_posts
                     WHERE saved_posts.post_id = posts.id
                     AND saved_posts.user_id = ?
-                ) AS is_saved
+                ) AS is_saved,
+
+                (
+                    SELECT post_feedback.feedback
+                    FROM post_feedback
+                    WHERE post_feedback.post_id = posts.id
+                    AND post_feedback.user_id = ?
+                    LIMIT 1
+                ) AS user_feedback
 
             FROM posts
 
@@ -244,13 +255,22 @@ router.get('/', async (req, res) => {
                 GROUP BY post_id
             ) AS save_counts ON save_counts.post_id = posts.id
 
+            LEFT JOIN (
+                SELECT
+                    post_id,
+                    SUM(feedback = 'helpful') AS helpful_count,
+                    SUM(feedback = 'not_helpful') AS not_helpful_count
+                FROM post_feedback
+                GROUP BY post_id
+            ) AS feedback_counts ON feedback_counts.post_id = posts.id
+
             LEFT JOIN post_tags ON posts.id = post_tags.post_id
             LEFT JOIN tags ON post_tags.tag_id = tags.id
 
             WHERE 1=1
         `;
 
-        const params = [currentUserId];
+        const params = [currentUserId, currentUserId];
 
         if (category) {
             query += ' AND posts.category = ?';
@@ -350,6 +370,8 @@ router.get('/saved', async (req, res) => {
             return res.redirect('/login');
         }
 
+        const userId = req.session.user.id;
+
         const [posts] = await db.query(
             `
             SELECT 
@@ -361,7 +383,19 @@ router.get('/saved', async (req, res) => {
                 COALESCE(comment_counts.total_comments, 0) AS total_comments,
 
                 COALESCE(save_counts.total_saves, 0) AS save_count,
-                1 AS is_saved
+
+                COALESCE(feedback_counts.helpful_count, 0) AS helpful_count,
+                COALESCE(feedback_counts.not_helpful_count, 0) AS not_helpful_count,
+
+                1 AS is_saved,
+
+                (
+                    SELECT post_feedback.feedback
+                    FROM post_feedback
+                    WHERE post_feedback.post_id = posts.id
+                    AND post_feedback.user_id = ?
+                    LIMIT 1
+                ) AS user_feedback
 
             FROM saved_posts
 
@@ -380,10 +414,19 @@ router.get('/saved', async (req, res) => {
                 GROUP BY post_id
             ) AS save_counts ON save_counts.post_id = posts.id
 
+            LEFT JOIN (
+                SELECT
+                    post_id,
+                    SUM(feedback = 'helpful') AS helpful_count,
+                    SUM(feedback = 'not_helpful') AS not_helpful_count
+                FROM post_feedback
+                GROUP BY post_id
+            ) AS feedback_counts ON feedback_counts.post_id = posts.id
+
             WHERE saved_posts.user_id = ?
             ORDER BY saved_posts.created_at DESC
             `,
-            [req.session.user.id]
+            [userId, userId]
         );
 
         res.render('index', {
@@ -733,6 +776,14 @@ router.post('/:id/delete', async (req, res) => {
 
         await db.query(
             `
+            DELETE FROM post_feedback
+            WHERE post_id = ?
+            `,
+            [postId]
+        );
+
+        await db.query(
+            `
             DELETE FROM post_tags
             WHERE post_id = ?
             `,
@@ -840,6 +891,102 @@ router.post('/:id/save', async (req, res) => {
 });
 
 /* =========================================================
+   HELPFUL / NOT HELPFUL POST FEEDBACK
+========================================================= */
+router.post('/:id/feedback', async (req, res) => {
+    try {
+        if (!req.session.user) {
+            return res.redirect('/login');
+        }
+
+        const postId = req.params.id;
+        const userId = req.session.user.id;
+        const actorName = req.session.user.username || 'Someone';
+        const feedback = req.body.feedback;
+
+        if (!['helpful', 'not_helpful'].includes(feedback)) {
+            return res.status(400).send('Invalid feedback type');
+        }
+
+        const [postRows] = await db.query(
+            `
+            SELECT id, title, user_id
+            FROM posts
+            WHERE id = ?
+            `,
+            [postId]
+        );
+
+        if (!postRows.length) {
+            return res.status(404).send('Post not found');
+        }
+
+        const post = postRows[0];
+
+        const [existing] = await db.query(
+            `
+            SELECT feedback
+            FROM post_feedback
+            WHERE post_id = ? AND user_id = ?
+            `,
+            [postId, userId]
+        );
+
+        let shouldNotify = false;
+
+        if (existing.length) {
+            if (existing[0].feedback === feedback) {
+                await db.query(
+                    `
+                    DELETE FROM post_feedback
+                    WHERE post_id = ? AND user_id = ?
+                    `,
+                    [postId, userId]
+                );
+            } else {
+                await db.query(
+                    `
+                    UPDATE post_feedback
+                    SET feedback = ?
+                    WHERE post_id = ? AND user_id = ?
+                    `,
+                    [feedback, postId, userId]
+                );
+
+                shouldNotify = feedback === 'helpful';
+            }
+        } else {
+            await db.query(
+                `
+                INSERT INTO post_feedback
+                (post_id, user_id, feedback)
+                VALUES (?, ?, ?)
+                `,
+                [postId, userId, feedback]
+            );
+
+            shouldNotify = feedback === 'helpful';
+        }
+
+        if (shouldNotify) {
+            await createNotification({
+                userId: post.user_id,
+                actorId: userId,
+                type: 'helpful',
+                message: `${actorName} marked your post "${post.title}" as helpful.`,
+                link: `/posts/${postId}`
+            });
+        }
+
+        res.redirect(`/posts/${postId}`);
+
+    } catch (err) {
+        console.error('POST FEEDBACK ERROR:', err);
+        res.status(500).send('Server Error');
+    }
+});
+
+/* =========================================================
    FOLLOW / UNFOLLOW POST CREATOR
 ========================================================= */
 router.post('/:id/follow-creator', async (req, res) => {
@@ -936,12 +1083,23 @@ router.get('/:id', async (req, res) => {
 
                 COALESCE(save_counts.total_saves, 0) AS save_count,
 
+                COALESCE(feedback_counts.helpful_count, 0) AS helpful_count,
+                COALESCE(feedback_counts.not_helpful_count, 0) AS not_helpful_count,
+
                 EXISTS (
                     SELECT 1
                     FROM saved_posts
                     WHERE saved_posts.post_id = posts.id
                     AND saved_posts.user_id = ?
                 ) AS is_saved,
+
+                (
+                    SELECT post_feedback.feedback
+                    FROM post_feedback
+                    WHERE post_feedback.post_id = posts.id
+                    AND post_feedback.user_id = ?
+                    LIMIT 1
+                ) AS user_feedback,
 
                 COALESCE(follower_counts.total_followers, 0) AS follower_count,
 
@@ -969,6 +1127,15 @@ router.get('/:id', async (req, res) => {
             ) AS save_counts ON save_counts.post_id = posts.id
 
             LEFT JOIN (
+                SELECT
+                    post_id,
+                    SUM(feedback = 'helpful') AS helpful_count,
+                    SUM(feedback = 'not_helpful') AS not_helpful_count
+                FROM post_feedback
+                GROUP BY post_id
+            ) AS feedback_counts ON feedback_counts.post_id = posts.id
+
+            LEFT JOIN (
                 SELECT following_id, COUNT(*) AS total_followers
                 FROM user_follows
                 GROUP BY following_id
@@ -976,7 +1143,7 @@ router.get('/:id', async (req, res) => {
 
             WHERE posts.id = ?
             `,
-            [currentUserId, currentUserId, postId]
+            [currentUserId, currentUserId, currentUserId, postId]
         );
 
         if (!posts.length) {

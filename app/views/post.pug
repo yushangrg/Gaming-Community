@@ -65,6 +65,9 @@ block content
   - const postType = post.post_type || 'Guide'
   - const difficulty = post.difficulty || 'Beginner'
   - const readTime = Number(post.read_time || 1)
+  - const helpfulCount = Number(post.helpful_count || 0)
+  - const notHelpfulCount = Number(post.not_helpful_count || 0)
+  - const userFeedback = post.user_feedback || ''
 
   .post-detail-page
     .post-page-container
@@ -129,8 +132,24 @@ block content
                       | 💾 Saved #{saveCount}
                     else
                       | 💾 Save #{saveCount}
+
+                form(action=`/posts/${post.id}/feedback`, method="POST")
+                  input(type="hidden", name="feedback", value="helpful")
+                  button(
+                    type="submit",
+                    class=(userFeedback === 'helpful' ? 'feedback-btn helpful active' : 'feedback-btn helpful')
+                  ) 👍 Helpful #{helpfulCount}
+
+                form(action=`/posts/${post.id}/feedback`, method="POST")
+                  input(type="hidden", name="feedback", value="not_helpful")
+                  button(
+                    type="submit",
+                    class=(userFeedback === 'not_helpful' ? 'feedback-btn not-helpful active' : 'feedback-btn not-helpful')
+                  ) 👎 Not Helpful #{notHelpfulCount}
               else
                 a.save-btn(href="/login") 💾 Login to save
+                a.feedback-btn.helpful(href="/login") 👍 Helpful #{helpfulCount}
+                a.feedback-btn.not-helpful(href="/login") 👎 Not Helpful #{notHelpfulCount}
 
             .post-image-frame
               img(src=post.image || "https://placehold.co/1200x700/0f172a/f8fafc?text=Gaming", alt=post.title)
@@ -159,6 +178,8 @@ block content
               .stat-pill 👁 #{post.views || 0} Views
               .stat-pill 💜 #{post.likes || 0} Likes
               .stat-pill 💾 #{saveCount} Saves
+              .stat-pill 👍 #{helpfulCount} Helpful
+              .stat-pill 👎 #{notHelpfulCount} Not Helpful
               .stat-pill 💬 #{totalComments} Comments
               .stat-pill ⭐ #{ratingValue} Rating
               .stat-pill 🧩 #{postType}
@@ -196,6 +217,14 @@ block content
               .info-row
                 span.label Saves
                 span.value= saveCount
+
+              .info-row
+                span.label Helpful
+                span.value= helpfulCount
+
+              .info-row
+                span.label Not Helpful
+                span.value= notHelpfulCount
 
               .info-row
                 span.label Rating

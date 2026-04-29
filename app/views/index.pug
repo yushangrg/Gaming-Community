@@ -173,6 +173,9 @@ block content
               - const readTime = Number(post.read_time || 1)
               - const saveCount = Number(post.save_count || 0)
               - const commentsCount = Number(post.comment_count || post.comments_count || post.total_comments || 0)
+              - const helpfulCount = Number(post.helpful_count || 0)
+              - const notHelpfulCount = Number(post.not_helpful_count || 0)
+              - const userFeedback = post.user_feedback || ''
               - const authorInitial = post.username ? post.username.charAt(0).toUpperCase() : 'U'
 
               article.professional-post-card
@@ -191,8 +194,8 @@ block content
                     a(href=`/posts/${post.id}`)= post.title
 
                   .tag-chip-row
-                    a.tag-chip(href=`/posts?type=${encodeURIComponent(postTypeValue)}`) 🧩 #{postTypeValue}
-                    a.tag-chip(href=`/posts?difficulty=${encodeURIComponent(difficultyValue)}`) 🎯 #{difficultyValue}
+                    a.tag-chip(href=buildPostUrl({ type: postTypeValue })) 🧩 #{postTypeValue}
+                    a.tag-chip(href=buildPostUrl({ difficulty: difficultyValue })) 🎯 #{difficultyValue}
                     span.tag-chip ⏱ #{readTime} min read
 
                   p.post-excerpt= excerpt
@@ -207,6 +210,8 @@ block content
                       span 💬 #{commentsCount}
                       span 💜 #{post.likes || 0}
                       span 💾 #{saveCount}
+                      span 👍 #{helpfulCount}
+                      span 👎 #{notHelpfulCount}
                       span ⭐ #{ratingValue}
 
                   .post-card-actions
@@ -219,8 +224,24 @@ block content
                             | 💾 Saved
                           else
                             | 💾 Save
+
+                      form(action=`/posts/${post.id}/feedback` method="POST")
+                        input(type="hidden" name="feedback" value="helpful")
+                        button(
+                          type="submit"
+                          class=userFeedback === 'helpful' ? 'feedback-btn helpful active' : 'feedback-btn helpful'
+                        ) 👍 Helpful
+
+                      form(action=`/posts/${post.id}/feedback` method="POST")
+                        input(type="hidden" name="feedback" value="not_helpful")
+                        button(
+                          type="submit"
+                          class=userFeedback === 'not_helpful' ? 'feedback-btn not-helpful active' : 'feedback-btn not-helpful'
+                        ) 👎 Not Helpful
                     else
                       a.save-btn(href="/login") 💾 Save
+                      a.feedback-btn.helpful(href="/login") 👍 Helpful
+                      a.feedback-btn.not-helpful(href="/login") 👎 Not Helpful
 
       aside.posts-right-sidebar
         .dashboard-side-card
@@ -257,6 +278,18 @@ block content
             .quick-stat-row
               span Difficulty Levels
               strong= difficultyOptions.length
+
+        .dashboard-side-card
+          h3 Feedback System
+          p.side-muted Posts can now receive helpful and not helpful feedback, so the best guides are easier to find.
+
+          .quick-stat-list
+            .quick-stat-row
+              span Helpful votes
+              strong 👍
+            .quick-stat-row
+              span Not helpful votes
+              strong 👎
 
         .dashboard-side-card
           h3 Community
