@@ -1,0 +1,78 @@
+extends layout
+
+block content
+  - const safeNotifications = typeof notifications !== 'undefined' && notifications ? notifications : []
+
+  .notifications-page
+    section.notifications-hero
+      .notifications-hero-content
+        span.notifications-eyebrow 🔔 Notifications
+        h1 Your community activity
+        p See comments, replies, follows, saves, likes, and reactions from other gamers.
+
+        .notifications-actions
+          form(action="/notifications/read-all", method="POST")
+            button.primary-btn(type="submit") Mark All Read
+
+          form(action="/notifications/clear", method="POST", onsubmit="return confirm('Clear all notifications?');")
+            button.ghost-btn.danger(type="submit") Clear All
+
+    .notifications-layout
+      main.notifications-main
+        if safeNotifications.length === 0
+          .notifications-empty-card
+            h2 No notifications yet
+            p When someone follows you, comments on your post, saves your post, or reacts to your comment, it will show here.
+            a.primary-btn(href="/posts") Browse Posts
+        else
+          .notifications-list
+            each item in safeNotifications
+              - const itemDate = item.created_at ? new Date(item.created_at).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recently'
+              - const icon = item.type === 'comment' ? '💬' : item.type === 'reply' ? '↩️' : item.type === 'follow' ? '👤' : item.type === 'like' ? '💜' : item.type === 'save' ? '💾' : item.type === 'reaction' ? '✨' : '🔔'
+
+              article.notification-card(class=!item.is_read ? 'unread' : '')
+                a.notification-card-main(href=item.link || '#')
+                  .notification-icon= icon
+
+                  .notification-copy
+                    h3= item.message
+                    span= itemDate
+
+                form(action=`/notifications/${item.id}/delete`, method="POST")
+                  button.notification-delete-btn(type="submit") ✕
+
+      aside.notifications-sidebar
+        .notifications-side-card
+          h3 Notification Types
+          .notification-type-list
+            .notification-type-row
+              span 💬 Comments
+              small On your posts
+            .notification-type-row
+              span ↩️ Replies
+              small To your comments
+            .notification-type-row
+              span 👤 Followers
+              small New followers
+            .notification-type-row
+              span 💜 Likes
+              small On your posts
+            .notification-type-row
+              span 💾 Saves
+              small On your posts
+            .notification-type-row
+              span ✨ Reactions
+              small On your comments
+
+        .notifications-side-card
+          h3 Quick Links
+          .notification-type-list
+            a.notification-type-row(href="/posts")
+              span Browse Posts
+              small View community posts
+            a.notification-type-row(href="/posts/create")
+              span Create Post
+              small Share a guide or tip
+            a.notification-type-row(href="/profile")
+              span Profile
+              small View your activity

@@ -1,5 +1,6 @@
 const express = require('express');
 const db = require('../services/db');
+const { createNotification } = require('../services/notifications');
 
 const router = express.Router();
 
@@ -99,7 +100,7 @@ router.get('/', async (req, res) => {
         });
 
     } catch (err) {
-        console.error(err);
+        console.error('USERS LIST ERROR:', err);
         res.status(500).send('Server Error');
     }
 });
@@ -115,6 +116,7 @@ router.post('/:id/follow', async (req, res) => {
 
         const followingId = Number(req.params.id);
         const followerId = Number(req.session.user.id);
+        const followerName = req.session.user.username || 'Someone';
 
         const redirectUrl = req.body.redirect || `/users/${followingId}`;
 
@@ -127,7 +129,11 @@ router.post('/:id/follow', async (req, res) => {
         }
 
         const [targetUserRows] = await db.query(
-            'SELECT id FROM users WHERE id = ?',
+            `
+            SELECT id, username
+            FROM users
+            WHERE id = ?
+            `,
             [followingId]
         );
 
@@ -161,12 +167,20 @@ router.post('/:id/follow', async (req, res) => {
                 `,
                 [followerId, followingId]
             );
+
+            await createNotification({
+                userId: followingId,
+                actorId: followerId,
+                type: 'follow',
+                message: `${followerName} followed you.`,
+                link: `/users/${followerId}`
+            });
         }
 
         res.redirect(redirectUrl);
 
     } catch (err) {
-        console.error(err);
+        console.error('FOLLOW USER ERROR:', err);
         res.status(500).send('Server Error');
     }
 });
@@ -279,7 +293,7 @@ router.get('/:id/followers', async (req, res) => {
         });
 
     } catch (err) {
-        console.error(err);
+        console.error('FOLLOWERS PAGE ERROR:', err);
         res.status(500).send('Server Error');
     }
 });
@@ -392,7 +406,7 @@ router.get('/:id/following', async (req, res) => {
         });
 
     } catch (err) {
-        console.error(err);
+        console.error('FOLLOWING PAGE ERROR:', err);
         res.status(500).send('Server Error');
     }
 });
@@ -451,8 +465,8 @@ router.get('/:id', async (req, res) => {
 
         const profileUser = users[0];
 
-        profileUser.followers_count = profileUser.follower_count;
-        profileUser.following_count = profileUser.following_count;
+        profileUser.followers_count = Number(profileUser.follower_count || 0);
+        profileUser.following_count = Number(profileUser.following_count || 0);
         profileUser.isFollowing = Boolean(profileUser.is_following);
         profileUser.isOwnProfile = currentUserId === Number(profileUser.id);
 
@@ -531,7 +545,7 @@ router.get('/:id', async (req, res) => {
         });
 
     } catch (err) {
-        console.error(err);
+        console.error('PUBLIC USER PROFILE ERROR:', err);
         res.status(500).send('Server Error');
     }
 });

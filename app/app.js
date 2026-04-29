@@ -6,7 +6,10 @@ const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const postRoutes = require('./routes/posts');
 const aboutRoutes = require('./routes/about');
+const notificationRoutes = require('./routes/notifications');
+
 const db = require('./services/db');
+const { getUnreadNotificationCount } = require('./services/notifications');
 
 const app = express();
 
@@ -33,12 +36,28 @@ app.use(session({
 }));
 
 /* =========================================================
-   GLOBAL USER FOR ALL PUG FILES
+   GLOBAL USER + NOTIFICATION COUNT FOR ALL PUG FILES
 ========================================================= */
-app.use((req, res, next) => {
-    res.locals.user = req.session.user || null;
-    res.locals.currentUser = req.session.user || null;
-    next();
+app.use(async (req, res, next) => {
+    try {
+        res.locals.user = req.session.user || null;
+        res.locals.currentUser = req.session.user || null;
+        res.locals.notificationCount = 0;
+
+        if (req.session.user) {
+            res.locals.notificationCount = await getUnreadNotificationCount(req.session.user.id);
+        }
+
+        next();
+    } catch (err) {
+        console.error('GLOBAL LOCALS ERROR:', err);
+
+        res.locals.user = req.session.user || null;
+        res.locals.currentUser = req.session.user || null;
+        res.locals.notificationCount = 0;
+
+        next();
+    }
 });
 
 /* =========================================================
@@ -47,6 +66,7 @@ app.use((req, res, next) => {
 app.use('/', authRoutes);
 app.use('/users', userRoutes);
 app.use('/posts', postRoutes);
+app.use('/notifications', notificationRoutes);
 app.use('/about', aboutRoutes);
 
 /* =========================================================
@@ -131,6 +151,7 @@ app.get('/profile', async (req, res) => {
 
         if (!users.length) {
             req.session.destroy(() => {});
+
             return res.render('profile', {
                 user: null,
                 currentUser: null,
@@ -233,7 +254,7 @@ app.get('/profile', async (req, res) => {
         });
 
     } catch (err) {
-        console.error(err);
+        console.error('PROFILE PAGE ERROR:', err);
         res.status(500).send('Server Error');
     }
 });
@@ -295,7 +316,7 @@ app.post('/profile/update', async (req, res) => {
         res.redirect('/profile');
 
     } catch (err) {
-        console.error(err);
+        console.error('UPDATE PROFILE ERROR:', err);
         res.status(500).send('Server Error');
     }
 });
@@ -380,7 +401,14 @@ app.get('/', async (req, res) => {
                 COALESCE(comment_counts.total_comments, 0) AS comments_count,
                 COALESCE(comment_counts.total_comments, 0) AS total_comments,
 
-                COALESCE(save_counts.total_saves, 0) AS save_count
+                COALESCE(save_counts.total_saves, 0) AS save_count,
+
+                EXISTS (
+                    SELECT 1
+                    FROM saved_posts
+                    WHERE saved_posts.post_id = posts.id
+                    AND saved_posts.user_id = ?
+                ) AS is_saved
 
             FROM posts
 
@@ -398,10 +426,11 @@ app.get('/', async (req, res) => {
                 GROUP BY post_id
             ) AS save_counts ON save_counts.post_id = posts.id
 
-            WHERE posts.category IN ('Guide', 'Tips', 'Tricks', 'Review', 'FPS', 'RPG', 'Mobile', 'Indie')
+            WHERE posts.post_type IN ('Guide', 'Tip', 'Trick', 'Review')
             ORDER BY posts.id DESC
             LIMIT 4
-            `
+            `,
+            [currentUserId]
         );
 
         const [topRatedPosts] = await db.query(
@@ -414,7 +443,14 @@ app.get('/', async (req, res) => {
                 COALESCE(comment_counts.total_comments, 0) AS comments_count,
                 COALESCE(comment_counts.total_comments, 0) AS total_comments,
 
-                COALESCE(save_counts.total_saves, 0) AS save_count
+                COALESCE(save_counts.total_saves, 0) AS save_count,
+
+                EXISTS (
+                    SELECT 1
+                    FROM saved_posts
+                    WHERE saved_posts.post_id = posts.id
+                    AND saved_posts.user_id = ?
+                ) AS is_saved
 
             FROM posts
 
@@ -435,7 +471,8 @@ app.get('/', async (req, res) => {
             WHERE COALESCE(posts.rating, 0) > 0
             ORDER BY posts.rating DESC, posts.likes DESC, posts.views DESC, posts.id DESC
             LIMIT 4
-            `
+            `,
+            [currentUserId]
         );
 
         const [popularGames] = await db.query(
@@ -517,10 +554,26 @@ app.get('/', async (req, res) => {
             `
             SELECT
                 posts.*,
-                users.username
+                users.username,
+
+                COALESCE(comment_counts.total_comments, 0) AS comment_count,
+                COALESCE(save_counts.total_saves, 0) AS save_count
+
             FROM posts
 
             JOIN users ON posts.user_id = users.id
+
+            LEFT JOIN (
+                SELECT post_id, COUNT(*) AS total_comments
+                FROM comments
+                GROUP BY post_id
+            ) AS comment_counts ON comment_counts.post_id = posts.id
+
+            LEFT JOIN (
+                SELECT post_id, COUNT(*) AS total_saves
+                FROM saved_posts
+                GROUP BY post_id
+            ) AS save_counts ON save_counts.post_id = posts.id
 
             WHERE posts.video IS NOT NULL AND posts.video <> ''
             ORDER BY posts.views DESC, posts.likes DESC, posts.id DESC

@@ -8,6 +8,7 @@ html
 
   body
     - const navUser = (typeof currentUser !== 'undefined' && currentUser) ? currentUser : (typeof user !== 'undefined' ? user : null)
+    - const unreadNotifications = typeof notificationCount !== 'undefined' ? Number(notificationCount || 0) : 0
 
     .navbar
       div GAMING-COMMUNITY
@@ -20,6 +21,12 @@ html
         if navUser
           a(href="/posts/create") Create Post
           a(href="/posts/saved") 💾 Saved
+
+          a.notification-nav-link(href="/notifications")
+            | 🔔 Notifications
+            if unreadNotifications > 0
+              span.notification-badge= unreadNotifications
+
           a(href="/profile") Profile
           a(href=`/users/${navUser.id}`) My Public Profile
           a(href=`/users/${navUser.id}/followers`) Followers

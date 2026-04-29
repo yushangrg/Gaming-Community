@@ -3,6 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const db = require('../services/db');
+const { createNotification } = require('../services/notifications');
 
 const router = express.Router();
 
@@ -313,7 +314,6 @@ router.get('/', async (req, res) => {
 
 /* =========================================================
    SAVED POSTS PAGE
-   Keep this before router.get('/:id')
 ========================================================= */
 router.get('/saved', async (req, res) => {
     try {
@@ -700,6 +700,14 @@ router.post('/:id/delete', async (req, res) => {
 
         await db.query(
             `
+            DELETE FROM notifications
+            WHERE link LIKE ?
+            `,
+            [`/posts/${postId}%`]
+        );
+
+        await db.query(
+            `
             DELETE FROM posts
             WHERE id = ?
             `,
@@ -729,15 +737,22 @@ router.post('/:id/save', async (req, res) => {
 
         const postId = req.params.id;
         const userId = req.session.user.id;
+        const actorName = req.session.user.username || 'Someone';
 
         const [postRows] = await db.query(
-            'SELECT id FROM posts WHERE id = ?',
+            `
+            SELECT id, title, user_id
+            FROM posts
+            WHERE id = ?
+            `,
             [postId]
         );
 
         if (!postRows.length) {
             return res.status(404).send('Post not found');
         }
+
+        const post = postRows[0];
 
         const [existing] = await db.query(
             `
@@ -765,6 +780,14 @@ router.post('/:id/save', async (req, res) => {
                 `,
                 [userId, postId]
             );
+
+            await createNotification({
+                userId: post.user_id,
+                actorId: userId,
+                type: 'save',
+                message: `${actorName} saved your post "${post.title}".`,
+                link: `/posts/${postId}`
+            });
         }
 
         res.redirect(`/posts/${postId}`);
@@ -786,6 +809,7 @@ router.post('/:id/follow-creator', async (req, res) => {
 
         const postId = req.params.id;
         const followerId = req.session.user.id;
+        const actorName = req.session.user.username || 'Someone';
 
         const [postRows] = await db.query(
             'SELECT id, user_id FROM posts WHERE id = ?',
@@ -828,6 +852,14 @@ router.post('/:id/follow-creator', async (req, res) => {
                 `,
                 [followerId, followingId]
             );
+
+            await createNotification({
+                userId: followingId,
+                actorId: followerId,
+                type: 'follow',
+                message: `${actorName} followed you.`,
+                link: `/users/${followerId}`
+            });
         }
 
         res.redirect(`/posts/${postId}`);
@@ -1022,12 +1054,39 @@ router.get('/:id/like', async (req, res) => {
             return res.redirect('/login');
         }
 
-        await db.query(
-            'UPDATE posts SET likes = COALESCE(likes, 0) + 1 WHERE id = ?',
-            [req.params.id]
+        const postId = req.params.id;
+        const actorId = req.session.user.id;
+        const actorName = req.session.user.username || 'Someone';
+
+        const [postRows] = await db.query(
+            `
+            SELECT id, title, user_id
+            FROM posts
+            WHERE id = ?
+            `,
+            [postId]
         );
 
-        res.redirect(`/posts/${req.params.id}`);
+        if (!postRows.length) {
+            return res.status(404).send('Post not found');
+        }
+
+        const post = postRows[0];
+
+        await db.query(
+            'UPDATE posts SET likes = COALESCE(likes, 0) + 1 WHERE id = ?',
+            [postId]
+        );
+
+        await createNotification({
+            userId: post.user_id,
+            actorId,
+            type: 'like',
+            message: `${actorName} liked your post "${post.title}".`,
+            link: `/posts/${postId}`
+        });
+
+        res.redirect(`/posts/${postId}`);
 
     } catch (err) {
         console.error('LIKE POST ERROR:', err);
@@ -1074,13 +1133,29 @@ router.post('/:id/comment', async (req, res) => {
 
         const content = req.body.content;
         const userId = req.session.user.id;
+        const actorName = req.session.user.username || 'Someone';
         const postId = req.params.id;
 
         if (!content || !content.trim()) {
             return res.redirect(`/posts/${postId}`);
         }
 
-        await db.query(
+        const [postRows] = await db.query(
+            `
+            SELECT id, title, user_id
+            FROM posts
+            WHERE id = ?
+            `,
+            [postId]
+        );
+
+        if (!postRows.length) {
+            return res.status(404).send('Post not found');
+        }
+
+        const post = postRows[0];
+
+        const [result] = await db.query(
             `
             INSERT INTO comments 
             (post_id, user_id, comment, parent_id) 
@@ -1088,6 +1163,14 @@ router.post('/:id/comment', async (req, res) => {
             `,
             [postId, userId, content.trim()]
         );
+
+        await createNotification({
+            userId: post.user_id,
+            actorId: userId,
+            type: 'comment',
+            message: `${actorName} commented on your post "${post.title}".`,
+            link: `/posts/${postId}#comment-${result.insertId}`
+        });
 
         res.redirect(`/posts/${postId}`);
 
@@ -1108,6 +1191,7 @@ router.post('/:id/comment/:commentId/reply', async (req, res) => {
 
         const content = req.body.content;
         const userId = req.session.user.id;
+        const actorName = req.session.user.username || 'Someone';
         const postId = req.params.id;
         const parentId = req.params.commentId;
 
@@ -1116,7 +1200,16 @@ router.post('/:id/comment/:commentId/reply', async (req, res) => {
         }
 
         const [parentRows] = await db.query(
-            'SELECT id, post_id FROM comments WHERE id = ?',
+            `
+            SELECT 
+                comments.id,
+                comments.post_id,
+                comments.user_id,
+                posts.title AS post_title
+            FROM comments
+            JOIN posts ON comments.post_id = posts.id
+            WHERE comments.id = ?
+            `,
             [parentId]
         );
 
@@ -1124,7 +1217,9 @@ router.post('/:id/comment/:commentId/reply', async (req, res) => {
             return res.status(404).send('Parent comment not found');
         }
 
-        await db.query(
+        const parentComment = parentRows[0];
+
+        const [result] = await db.query(
             `
             INSERT INTO comments 
             (post_id, user_id, comment, parent_id) 
@@ -1132,6 +1227,14 @@ router.post('/:id/comment/:commentId/reply', async (req, res) => {
             `,
             [postId, userId, content.trim(), parentId]
         );
+
+        await createNotification({
+            userId: parentComment.user_id,
+            actorId: userId,
+            type: 'reply',
+            message: `${actorName} replied to your comment on "${parentComment.post_title}".`,
+            link: `/posts/${postId}#comment-${result.insertId}`
+        });
 
         res.redirect(`/posts/${postId}#comment-${parentId}`);
 
@@ -1152,6 +1255,7 @@ router.post('/comments/:commentId/react', async (req, res) => {
 
         const commentId = req.params.commentId;
         const userId = req.session.user.id;
+        const actorName = req.session.user.username || 'Someone';
         const reaction = req.body.reaction;
 
         if (!['like', 'helpful', 'funny'].includes(reaction)) {
@@ -1159,7 +1263,15 @@ router.post('/comments/:commentId/react', async (req, res) => {
         }
 
         const [commentRows] = await db.query(
-            'SELECT post_id FROM comments WHERE id = ?',
+            `
+            SELECT 
+                comments.post_id,
+                comments.user_id,
+                posts.title AS post_title
+            FROM comments
+            JOIN posts ON comments.post_id = posts.id
+            WHERE comments.id = ?
+            `,
             [commentId]
         );
 
@@ -1167,7 +1279,9 @@ router.post('/comments/:commentId/react', async (req, res) => {
             return res.status(404).send('Comment not found');
         }
 
-        const postId = commentRows[0].post_id;
+        const comment = commentRows[0];
+        const postId = comment.post_id;
+        let shouldNotify = false;
 
         const [existing] = await db.query(
             `
@@ -1196,6 +1310,8 @@ router.post('/comments/:commentId/react', async (req, res) => {
                     `,
                     [reaction, commentId, userId]
                 );
+
+                shouldNotify = true;
             }
         } else {
             await db.query(
@@ -1206,6 +1322,18 @@ router.post('/comments/:commentId/react', async (req, res) => {
                 `,
                 [commentId, userId, reaction]
             );
+
+            shouldNotify = true;
+        }
+
+        if (shouldNotify) {
+            await createNotification({
+                userId: comment.user_id,
+                actorId: userId,
+                type: 'reaction',
+                message: `${actorName} reacted "${reaction}" to your comment on "${comment.post_title}".`,
+                link: `/posts/${postId}#comment-${commentId}`
+            });
         }
 
         res.redirect(`/posts/${postId}#comment-${commentId}`);
@@ -1282,6 +1410,21 @@ router.post('/comments/:commentId/delete', async (req, res) => {
         if (Number(comment.user_id) !== Number(userId)) {
             return res.status(403).send('You can only delete your own comments');
         }
+
+        await db.query(
+            'DELETE FROM comment_reactions WHERE comment_id = ?',
+            [commentId]
+        );
+
+        await db.query(
+            'DELETE FROM comment_reports WHERE comment_id = ?',
+            [commentId]
+        );
+
+        await db.query(
+            'DELETE FROM notifications WHERE link LIKE ?',
+            [`%#comment-${commentId}`]
+        );
 
         await db.query(
             'DELETE FROM comments WHERE id = ?',
