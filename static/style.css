@@ -4,6 +4,8 @@
    - Navbar / Footer
    - Posts listing page
    - Single post detail page
+   - Save posts feature
+   - Follow creator/user feature
    - Users page
    - Public user profiles
    - Profile page with edit form
@@ -50,6 +52,8 @@
   --shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
   --shadow-card: 0 16px 45px rgba(0, 0, 0, 0.32);
   --glow: 0 12px 32px rgba(124, 58, 237, 0.32);
+  --green-glow: 0 12px 32px rgba(34, 197, 94, 0.22);
+  --blue-glow: 0 12px 32px rgba(56, 189, 248, 0.22);
 
   --radius-sm: 10px;
   --radius-md: 14px;
@@ -180,6 +184,12 @@ p {
   padding: 11px 18px;
 }
 
+.navbar a[href="/posts/saved"] {
+  color: #e9d5ff;
+  background: rgba(124, 58, 237, 0.16);
+  border: 1px solid rgba(168, 85, 247, 0.28);
+}
+
 
 /* =========================================================
    04. SHARED LAYOUT / CARDS
@@ -299,6 +309,8 @@ button,
 .btn,
 .primary-btn,
 .like-btn,
+.save-btn,
+.follow-btn,
 .ghost-btn,
 .comment-action-btn,
 .read-more-btn,
@@ -320,6 +332,8 @@ button,
 button,
 .primary-btn,
 .like-btn,
+.save-btn,
+.follow-btn,
 .read-more-btn,
 .side-action-btn,
 .create-post-mini,
@@ -340,6 +354,8 @@ button:hover,
 .btn:hover,
 .primary-btn:hover,
 .like-btn:hover,
+.save-btn:hover,
+.follow-btn:hover,
 .ghost-btn:hover,
 .comment-action-btn:hover,
 .read-more-btn:hover,
@@ -353,6 +369,42 @@ button:hover,
   transform: translateY(-2px);
   filter: brightness(1.08);
   color: #fff;
+}
+
+.primary-btn,
+.like-btn,
+.save-btn,
+.follow-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 18px;
+  line-height: 1;
+  text-align: center;
+}
+
+.save-btn {
+  background: linear-gradient(135deg, #2563eb, var(--blue));
+  box-shadow: var(--blue-glow);
+}
+
+.save-btn.is-saved,
+.save-btn.saved {
+  background: linear-gradient(135deg, var(--green), #16a34a);
+  box-shadow: var(--green-glow);
+}
+
+.follow-btn {
+  background: linear-gradient(135deg, var(--purple-dark), var(--pink));
+  box-shadow: var(--glow);
+}
+
+.follow-btn.is-following,
+.follow-btn.following,
+.primary-btn.is-following {
+  background: linear-gradient(135deg, var(--green), #16a34a);
+  box-shadow: var(--green-glow);
 }
 
 .ghost-btn {
@@ -953,6 +1005,10 @@ button:hover,
 
 .post-card-actions {
   margin-top: 14px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .read-more-btn,
@@ -1141,6 +1197,26 @@ button:hover,
   font-size: 0.9rem;
 }
 
+.author-followers {
+  color: #c4b5fd !important;
+  font-size: 0.84rem !important;
+  font-weight: 800;
+}
+
+.author-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.author-actions form,
+.post-like-row form,
+.creator-side-profile form {
+  margin: 0;
+}
+
 .owner-actions {
   display: flex;
   align-items: center;
@@ -1156,12 +1232,10 @@ button:hover,
 .hero-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
   margin-bottom: 18px;
-}
-
-.like-btn,
-.primary-btn {
-  padding: 12px 18px;
 }
 
 .post-image-frame,
@@ -1274,6 +1348,19 @@ button:hover,
 .sidebar-tags {
   gap: 8px;
   margin-top: 0;
+}
+
+.creator-side-profile {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.creator-side-profile .author-chip {
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(7, 16, 33, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.12);
 }
 
 
@@ -1726,6 +1813,10 @@ button:hover,
   justify-content: flex-end;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.user-card-actions form {
+  margin: 0;
 }
 
 .user-action-btn.secondary {
@@ -2529,6 +2620,10 @@ body > h3 + p + a {
     gap: 12px;
   }
 
+  .author-actions {
+    margin-left: 0;
+  }
+
   .post-like-row,
   .hero-actions {
     justify-content: flex-start;
@@ -2582,6 +2677,8 @@ body > h3 + p + a {
 
   .ghost-btn,
   .like-btn,
+  .save-btn,
+  .follow-btn,
   .primary-btn,
   .comment-action-btn,
   .read-more-btn,
@@ -2590,6 +2687,18 @@ body > h3 + p + a {
   .users-primary-link,
   .user-action-btn {
     width: auto;
+  }
+
+  .post-like-row .like-btn,
+  .post-like-row .save-btn,
+  .post-like-row a,
+  .post-like-row form,
+  .author-actions,
+  .author-actions form,
+  .author-actions .follow-btn,
+  .creator-side-profile form,
+  .creator-side-profile .primary-btn {
+    width: 100%;
   }
 
   .comment-form-actions .primary-btn,

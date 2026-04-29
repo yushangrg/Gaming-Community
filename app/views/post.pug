@@ -53,12 +53,15 @@ mixin renderComment(comment, post, currentUser, level)
 block content
   - const safeComments = typeof comments !== 'undefined' && comments ? comments : []
   - const safeTags = typeof tags !== 'undefined' && tags ? tags : []
-  - const currentUser = typeof user !== 'undefined' ? user : null
+  - const viewer = (typeof currentUser !== 'undefined' && currentUser) ? currentUser : (typeof user !== 'undefined' ? user : null)
   - const countComments = (items = []) => items.reduce((sum, item) => sum + 1 + countComments(item.replies || []), 0)
   - const totalComments = countComments(safeComments)
   - const published = post.created_at ? new Date(post.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recently'
   - const authorInitial = post.username ? post.username.charAt(0).toUpperCase() : 'U'
   - const ratingValue = post.rating ? parseFloat(post.rating).toFixed(1) : '0.0'
+  - const saveCount = post.save_count || 0
+  - const followerCount = post.follower_count || 0
+  - const isOwner = viewer && Number(viewer.id) === Number(post.user_id)
 
   .post-detail-page
     .post-page-container
@@ -86,8 +89,20 @@ block content
                 .author-copy
                   strong= post.username || 'Unknown'
                   span Community member
+                  span.author-followers #{followerCount} followers
 
-              if currentUser && currentUser.id === post.user_id
+              .author-actions
+                if viewer && !isOwner
+                  form(action=`/posts/${post.id}/follow-creator` method="POST")
+                    button(type="submit" class=post.is_following ? 'follow-btn is-following' : 'follow-btn')
+                      if post.is_following
+                        | ✓ Following
+                      else
+                        | + Follow
+                else if !viewer
+                  a.follow-btn(href="/login") Login to follow
+
+              if isOwner
                 .owner-actions
                   a(href=`/posts/${post.id}/edit`)
                     button(type="button" class="ghost-btn") ✏️ Edit
@@ -97,6 +112,16 @@ block content
             .post-like-row
               a(href=`/posts/${post.id}/like`)
                 button(type="button" class="like-btn") 💜 Like #{post.likes || 0}
+
+              if viewer
+                form(action=`/posts/${post.id}/save` method="POST")
+                  button(type="submit" class=post.is_saved ? 'save-btn is-saved' : 'save-btn')
+                    if post.is_saved
+                      | 💾 Saved #{saveCount}
+                    else
+                      | 💾 Save #{saveCount}
+              else
+                a.save-btn(href="/login") 💾 Login to save
 
             .post-image-frame
               img(src=post.image || "https://placehold.co/1200x700/0f172a/f8fafc?text=Gaming" alt=post.title)
@@ -123,6 +148,8 @@ block content
 
             .post-footer-stats
               .stat-pill 👁 #{post.views || 0} Views
+              .stat-pill 💜 #{post.likes || 0} Likes
+              .stat-pill 💾 #{saveCount} Saves
               .stat-pill 💬 #{totalComments} Comments
               .stat-pill ⭐ #{ratingValue} Rating
 
@@ -140,10 +167,32 @@ block content
                 span.label Likes
                 span.value= post.likes || 0
               .info-row
+                span.label Saves
+                span.value= saveCount
+              .info-row
                 span.label Rating
                 span.value #{ratingValue} / 5
 
-          if currentUser
+          .ui-card.side-card
+            h3.side-title 👤 Creator
+            .creator-side-profile
+              .author-chip
+                .author-avatar= authorInitial
+                .author-copy
+                  strong= post.username || 'Unknown'
+                  span #{followerCount} followers
+
+              if viewer && !isOwner
+                form(action=`/posts/${post.id}/follow-creator` method="POST")
+                  button(type="submit" class=post.is_following ? 'primary-btn is-following' : 'primary-btn')
+                    if post.is_following
+                      | ✓ Following
+                    else
+                      | + Follow Creator
+              else if !viewer
+                a.primary-btn(href="/login") Login to follow
+
+          if viewer
             .ui-card.side-card
               h3.side-title ⭐ Rate This Post
               form(action=`/posts/${post.id}/rate` method="POST" class="side-rate-form")
@@ -173,7 +222,7 @@ block content
               h3 💬 Comments
               span.comment-count= totalComments
 
-            if currentUser
+            if viewer
               form(action=`/posts/${post.id}/comment` method="POST" class="comment-form")
                 textarea(name="content" rows="3" placeholder="Add a comment..." required)
                 .comment-form-actions
@@ -188,4 +237,4 @@ block content
             else
               .comment-list
                 each comment in safeComments
-                  +renderComment(comment, post, currentUser, 0)
+                  +renderComment(comment, post, viewer, 0)

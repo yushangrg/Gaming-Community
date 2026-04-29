@@ -34,14 +34,26 @@ router.get('/', async (req, res) => {
         const tag = req.query.tag || '';
         const search = req.query.search || '';
         const userFilter = req.query.user || '';
+        const currentUserId = req.session.user ? req.session.user.id : 0;
 
         let query = `
             SELECT DISTINCT
                 posts.*,
                 users.username,
+
                 COALESCE(comment_counts.total_comments, 0) AS comment_count,
                 COALESCE(comment_counts.total_comments, 0) AS comments_count,
-                COALESCE(comment_counts.total_comments, 0) AS total_comments
+                COALESCE(comment_counts.total_comments, 0) AS total_comments,
+
+                COALESCE(save_counts.total_saves, 0) AS save_count,
+
+                EXISTS (
+                    SELECT 1
+                    FROM saved_posts
+                    WHERE saved_posts.post_id = posts.id
+                    AND saved_posts.user_id = ?
+                ) AS is_saved
+
             FROM posts
             JOIN users ON posts.user_id = users.id
 
@@ -51,13 +63,19 @@ router.get('/', async (req, res) => {
                 GROUP BY post_id
             ) AS comment_counts ON comment_counts.post_id = posts.id
 
+            LEFT JOIN (
+                SELECT post_id, COUNT(*) AS total_saves
+                FROM saved_posts
+                GROUP BY post_id
+            ) AS save_counts ON save_counts.post_id = posts.id
+
             LEFT JOIN post_tags ON posts.id = post_tags.post_id
             LEFT JOIN tags ON post_tags.tag_id = tags.id
 
             WHERE 1=1
         `;
 
-        const params = [];
+        const params = [currentUserId];
 
         if (category) {
             query += ' AND posts.category = ?';
@@ -93,7 +111,70 @@ router.get('/', async (req, res) => {
             category,
             tag,
             search,
-            selectedUser: userFilter
+            selectedUser: userFilter,
+            user: req.session.user || null,
+            currentUser: req.session.user || null
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+});
+
+// ======================
+// SAVED POSTS PAGE
+// IMPORTANT: keep this before router.get('/:id')
+// ======================
+router.get('/saved', async (req, res) => {
+    try {
+        if (!req.session.user) {
+            return res.redirect('/login');
+        }
+
+        const [posts] = await db.query(
+            `
+            SELECT 
+                posts.*,
+                users.username,
+
+                COALESCE(comment_counts.total_comments, 0) AS comment_count,
+                COALESCE(comment_counts.total_comments, 0) AS comments_count,
+                COALESCE(comment_counts.total_comments, 0) AS total_comments,
+
+                COALESCE(save_counts.total_saves, 0) AS save_count,
+                1 AS is_saved
+
+            FROM saved_posts
+            JOIN posts ON saved_posts.post_id = posts.id
+            JOIN users ON posts.user_id = users.id
+
+            LEFT JOIN (
+                SELECT post_id, COUNT(*) AS total_comments
+                FROM comments
+                GROUP BY post_id
+            ) AS comment_counts ON comment_counts.post_id = posts.id
+
+            LEFT JOIN (
+                SELECT post_id, COUNT(*) AS total_saves
+                FROM saved_posts
+                GROUP BY post_id
+            ) AS save_counts ON save_counts.post_id = posts.id
+
+            WHERE saved_posts.user_id = ?
+            ORDER BY saved_posts.created_at DESC
+            `,
+            [req.session.user.id]
+        );
+
+        res.render('index', {
+            posts,
+            category: '',
+            tag: '',
+            search: '',
+            selectedUser: '',
+            pageTitle: 'Saved Posts',
+            user: req.session.user || null,
+            currentUser: req.session.user || null
         });
     } catch (err) {
         console.error(err);
@@ -110,7 +191,10 @@ router.get('/create', async (req, res) => {
             return res.redirect('/login');
         }
 
-        res.render('create-post');
+        res.render('create-post', {
+            user: req.session.user || null,
+            currentUser: req.session.user || null
+        });
     } catch (err) {
         console.error(err);
         res.status(500).send('Server Error');
@@ -157,11 +241,130 @@ router.post('/create', async (req, res) => {
 });
 
 // ======================
+// SAVE / UNSAVE A POST
+// ======================
+router.post('/:id/save', async (req, res) => {
+    try {
+        if (!req.session.user) {
+            return res.redirect('/login');
+        }
+
+        const postId = req.params.id;
+        const userId = req.session.user.id;
+
+        const [postRows] = await db.query(
+            'SELECT id FROM posts WHERE id = ?',
+            [postId]
+        );
+
+        if (!postRows.length) {
+            return res.status(404).send('Post not found');
+        }
+
+        const [existing] = await db.query(
+            `
+            SELECT user_id, post_id
+            FROM saved_posts
+            WHERE user_id = ? AND post_id = ?
+            `,
+            [userId, postId]
+        );
+
+        if (existing.length) {
+            await db.query(
+                `
+                DELETE FROM saved_posts
+                WHERE user_id = ? AND post_id = ?
+                `,
+                [userId, postId]
+            );
+        } else {
+            await db.query(
+                `
+                INSERT INTO saved_posts
+                (user_id, post_id)
+                VALUES (?, ?)
+                `,
+                [userId, postId]
+            );
+        }
+
+        res.redirect(`/posts/${postId}`);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+});
+
+// ======================
+// FOLLOW / UNFOLLOW POST CREATOR
+// ======================
+router.post('/:id/follow-creator', async (req, res) => {
+    try {
+        if (!req.session.user) {
+            return res.redirect('/login');
+        }
+
+        const postId = req.params.id;
+        const followerId = req.session.user.id;
+
+        const [postRows] = await db.query(
+            'SELECT id, user_id FROM posts WHERE id = ?',
+            [postId]
+        );
+
+        if (!postRows.length) {
+            return res.status(404).send('Post not found');
+        }
+
+        const followingId = postRows[0].user_id;
+
+        if (Number(followerId) === Number(followingId)) {
+            return res.redirect(`/posts/${postId}`);
+        }
+
+        const [existing] = await db.query(
+            `
+            SELECT follower_id, following_id
+            FROM user_follows
+            WHERE follower_id = ? AND following_id = ?
+            `,
+            [followerId, followingId]
+        );
+
+        if (existing.length) {
+            await db.query(
+                `
+                DELETE FROM user_follows
+                WHERE follower_id = ? AND following_id = ?
+                `,
+                [followerId, followingId]
+            );
+        } else {
+            await db.query(
+                `
+                INSERT INTO user_follows
+                (follower_id, following_id)
+                VALUES (?, ?)
+                `,
+                [followerId, followingId]
+            );
+        }
+
+        res.redirect(`/posts/${postId}`);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+});
+
+// ======================
 // DETAIL PAGE
 // ======================
 router.get('/:id', async (req, res) => {
     try {
         const postId = req.params.id;
+        const currentUserId = req.session.user ? req.session.user.id : 0;
 
         await db.query(
             'UPDATE posts SET views = COALESCE(views, 0) + 1 WHERE id = ?',
@@ -173,9 +376,29 @@ router.get('/:id', async (req, res) => {
             SELECT 
                 posts.*,
                 users.username,
+
                 COALESCE(comment_counts.total_comments, 0) AS comment_count,
                 COALESCE(comment_counts.total_comments, 0) AS comments_count,
-                COALESCE(comment_counts.total_comments, 0) AS total_comments
+                COALESCE(comment_counts.total_comments, 0) AS total_comments,
+
+                COALESCE(save_counts.total_saves, 0) AS save_count,
+
+                EXISTS (
+                    SELECT 1
+                    FROM saved_posts
+                    WHERE saved_posts.post_id = posts.id
+                    AND saved_posts.user_id = ?
+                ) AS is_saved,
+
+                COALESCE(follower_counts.total_followers, 0) AS follower_count,
+
+                EXISTS (
+                    SELECT 1
+                    FROM user_follows
+                    WHERE user_follows.follower_id = ?
+                    AND user_follows.following_id = posts.user_id
+                ) AS is_following
+
             FROM posts
             JOIN users ON posts.user_id = users.id
 
@@ -185,9 +408,21 @@ router.get('/:id', async (req, res) => {
                 GROUP BY post_id
             ) AS comment_counts ON comment_counts.post_id = posts.id
 
+            LEFT JOIN (
+                SELECT post_id, COUNT(*) AS total_saves
+                FROM saved_posts
+                GROUP BY post_id
+            ) AS save_counts ON save_counts.post_id = posts.id
+
+            LEFT JOIN (
+                SELECT following_id, COUNT(*) AS total_followers
+                FROM user_follows
+                GROUP BY following_id
+            ) AS follower_counts ON follower_counts.following_id = posts.user_id
+
             WHERE posts.id = ?
             `,
-            [postId]
+            [currentUserId, currentUserId, postId]
         );
 
         if (!posts.length) {
@@ -285,7 +520,8 @@ router.get('/:id', async (req, res) => {
             post,
             tags,
             comments: commentTree,
-            user: req.session.user || null
+            user: req.session.user || null,
+            currentUser: req.session.user || null
         });
     } catch (err) {
         console.error(err);
