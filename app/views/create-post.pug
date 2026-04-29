@@ -8,7 +8,7 @@ block content
           h2 ✍️ Create New Post
           p.profile-muted Share a gaming tip, guide, review, trick, or tutorial with the community.
 
-      form.profile-edit-form(action="/posts/create", method="POST")
+      form.profile-edit-form(action="/posts/create", method="POST", enctype="multipart/form-data")
         .profile-form-grid
           .form-group.full
             label(for="title") Title
@@ -33,13 +33,24 @@ block content
               option(value="Other") Other
 
           .form-group
-            label(for="image") Image URL
+            label(for="image") Upload Image
             input(
-              type="url"
+              type="file"
               id="image"
               name="image"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+            )
+            small Upload a screenshot, cover image, or gaming image. Max size: 5MB.
+
+          .form-group.full
+            label(for="image_url") Or Image URL
+            input(
+              type="url"
+              id="image_url"
+              name="image_url"
               placeholder="https://example.com/image.jpg"
             )
+            small If you upload an image and also add a URL, the uploaded image will be used.
 
           .form-group.full
             label(for="video") YouTube Video URL

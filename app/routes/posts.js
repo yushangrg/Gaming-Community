@@ -1,7 +1,88 @@
 const express = require('express');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const db = require('../services/db');
 
 const router = express.Router();
+
+/* =========================================================
+   IMAGE UPLOAD SETUP
+========================================================= */
+const uploadDir = path.join(__dirname, '../../static/uploads');
+
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, uploadDir);
+    },
+
+    filename: (req, file, cb) => {
+        const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+        const extension = path.extname(file.originalname).toLowerCase();
+
+        cb(null, `${uniqueName}${extension}`);
+    }
+});
+
+const fileFilter = (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+    if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+    } else {
+        cb(new Error('Only JPG, PNG, WEBP, and GIF image files are allowed.'));
+    }
+};
+
+const upload = multer({
+    storage,
+    fileFilter,
+    limits: {
+        fileSize: 5 * 1024 * 1024
+    }
+});
+
+function uploadSingleImage(req, res, next) {
+    upload.single('image')(req, res, err => {
+        if (err instanceof multer.MulterError) {
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(400).send('Image is too large. Maximum size is 5MB.');
+            }
+
+            return res.status(400).send(`Upload error: ${err.message}`);
+        }
+
+        if (err) {
+            return res.status(400).send(err.message);
+        }
+
+        next();
+    });
+}
+
+/* =========================================================
+   DELETE LOCAL UPLOADED IMAGE
+========================================================= */
+function deleteUploadedImage(imagePath) {
+    try {
+        if (!imagePath || !imagePath.startsWith('/uploads/')) {
+            return;
+        }
+
+        const filename = path.basename(imagePath);
+        const filePath = path.join(uploadDir, filename);
+
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
+    } catch (err) {
+        console.error('DELETE UPLOADED IMAGE ERROR:', err);
+    }
+}
 
 /* =========================================================
    BUILD COMMENT TREE
@@ -85,7 +166,7 @@ router.get('/', async (req, res) => {
         const category = req.query.category || '';
         const tag = req.query.tag || '';
         const search = req.query.search || '';
-        const userFilter = req.query.user || '';
+        const userFilter = req.query.user || req.query.userId || '';
         const currentUserId = req.session.user ? req.session.user.id : 0;
 
         let query = `
@@ -178,7 +259,7 @@ router.get('/', async (req, res) => {
 
 /* =========================================================
    SAVED POSTS PAGE
-   IMPORTANT: keep this before router.get('/:id')
+   Keep this before router.get('/:id')
 ========================================================= */
 router.get('/saved', async (req, res) => {
     try {
@@ -262,31 +343,23 @@ router.get('/create', async (req, res) => {
 /* =========================================================
    CREATE POST SUBMIT
 ========================================================= */
-router.post('/create', async (req, res) => {
+router.post('/create', uploadSingleImage, async (req, res) => {
     try {
         if (!req.session.user) {
             return res.redirect('/login');
         }
 
-        console.log('CREATE POST BODY:', req.body);
-
-        const { title, content, category, image, video } = req.body;
+        const { title, content, category, image_url, video } = req.body;
         const userId = req.session.user.id;
 
         if (!title || !content || !category) {
-            console.log('CREATE POST MISSING FIELDS:', {
-                title,
-                content,
-                category
-            });
-
             return res.status(400).send('Missing title, content, or category');
         }
 
-        const cleanTitle = title.trim();
-        const cleanContent = content.trim();
-        const cleanCategory = category.trim();
-        const cleanImage = image && image.trim() ? image.trim() : null;
+        const uploadedImagePath = req.file ? `/uploads/${req.file.filename}` : null;
+        const imageUrl = image_url && image_url.trim() ? image_url.trim() : null;
+        const finalImage = uploadedImagePath || imageUrl;
+
         const embedVideo = convertYouTubeUrlToEmbed(video);
 
         const [result] = await db.query(
@@ -296,16 +369,14 @@ router.post('/create', async (req, res) => {
             VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0)
             `,
             [
-                cleanTitle,
-                cleanContent,
-                cleanCategory,
-                cleanImage,
+                title.trim(),
+                content.trim(),
+                category.trim(),
+                finalImage,
                 embedVideo,
                 userId
             ]
         );
-
-        console.log('POST CREATED ID:', result.insertId);
 
         res.redirect(`/posts/${result.insertId}`);
 
@@ -316,7 +387,229 @@ router.post('/create', async (req, res) => {
 });
 
 /* =========================================================
-   SAVE / UNSAVE A POST
+   EDIT POST PAGE
+   Keep this before router.get('/:id')
+========================================================= */
+router.get('/:id/edit', async (req, res) => {
+    try {
+        if (!req.session.user) {
+            return res.redirect('/login');
+        }
+
+        const postId = req.params.id;
+        const userId = req.session.user.id;
+
+        const [posts] = await db.query(
+            `
+            SELECT *
+            FROM posts
+            WHERE id = ?
+            `,
+            [postId]
+        );
+
+        if (!posts.length) {
+            return res.status(404).send('Post not found');
+        }
+
+        const post = posts[0];
+
+        if (Number(post.user_id) !== Number(userId)) {
+            return res.status(403).send('You can only edit your own posts');
+        }
+
+        res.render('edit-post', {
+            post,
+            user: req.session.user || null,
+            currentUser: req.session.user || null
+        });
+
+    } catch (err) {
+        console.error('EDIT POST PAGE ERROR:', err);
+        res.status(500).send('Server Error');
+    }
+});
+
+/* =========================================================
+   EDIT POST SUBMIT
+========================================================= */
+router.post('/:id/edit', uploadSingleImage, async (req, res) => {
+    try {
+        if (!req.session.user) {
+            return res.redirect('/login');
+        }
+
+        const postId = req.params.id;
+        const userId = req.session.user.id;
+        const { title, content, category, image_url, video } = req.body;
+
+        if (!title || !content || !category) {
+            return res.status(400).send('Missing title, content, or category');
+        }
+
+        const [posts] = await db.query(
+            `
+            SELECT *
+            FROM posts
+            WHERE id = ?
+            `,
+            [postId]
+        );
+
+        if (!posts.length) {
+            return res.status(404).send('Post not found');
+        }
+
+        const post = posts[0];
+
+        if (Number(post.user_id) !== Number(userId)) {
+            return res.status(403).send('You can only edit your own posts');
+        }
+
+        const uploadedImagePath = req.file ? `/uploads/${req.file.filename}` : null;
+        const imageUrl = image_url && image_url.trim() ? image_url.trim() : null;
+        const finalImage = uploadedImagePath || imageUrl || post.image;
+        const embedVideo = convertYouTubeUrlToEmbed(video);
+
+        if (uploadedImagePath && post.image && post.image.startsWith('/uploads/')) {
+            deleteUploadedImage(post.image);
+        }
+
+        await db.query(
+            `
+            UPDATE posts
+            SET
+                title = ?,
+                content = ?,
+                category = ?,
+                image = ?,
+                video = ?
+            WHERE id = ?
+            `,
+            [
+                title.trim(),
+                content.trim(),
+                category.trim(),
+                finalImage,
+                embedVideo,
+                postId
+            ]
+        );
+
+        res.redirect(`/posts/${postId}`);
+
+    } catch (err) {
+        console.error('EDIT POST ERROR:', err);
+        res.status(500).send('Server Error while editing post');
+    }
+});
+
+/* =========================================================
+   DELETE POST
+========================================================= */
+router.post('/:id/delete', async (req, res) => {
+    try {
+        if (!req.session.user) {
+            return res.redirect('/login');
+        }
+
+        const postId = req.params.id;
+        const userId = req.session.user.id;
+
+        const [posts] = await db.query(
+            `
+            SELECT *
+            FROM posts
+            WHERE id = ?
+            `,
+            [postId]
+        );
+
+        if (!posts.length) {
+            return res.status(404).send('Post not found');
+        }
+
+        const post = posts[0];
+
+        if (Number(post.user_id) !== Number(userId)) {
+            return res.status(403).send('You can only delete your own posts');
+        }
+
+        const [comments] = await db.query(
+            `
+            SELECT id
+            FROM comments
+            WHERE post_id = ?
+            `,
+            [postId]
+        );
+
+        const commentIds = comments.map(comment => comment.id);
+
+        if (commentIds.length > 0) {
+            await db.query(
+                `
+                DELETE FROM comment_reactions
+                WHERE comment_id IN (?)
+                `,
+                [commentIds]
+            );
+
+            await db.query(
+                `
+                DELETE FROM comment_reports
+                WHERE comment_id IN (?)
+                `,
+                [commentIds]
+            );
+        }
+
+        await db.query(
+            `
+            DELETE FROM comments
+            WHERE post_id = ?
+            `,
+            [postId]
+        );
+
+        await db.query(
+            `
+            DELETE FROM saved_posts
+            WHERE post_id = ?
+            `,
+            [postId]
+        );
+
+        await db.query(
+            `
+            DELETE FROM post_tags
+            WHERE post_id = ?
+            `,
+            [postId]
+        );
+
+        await db.query(
+            `
+            DELETE FROM posts
+            WHERE id = ?
+            `,
+            [postId]
+        );
+
+        if (post.image && post.image.startsWith('/uploads/')) {
+            deleteUploadedImage(post.image);
+        }
+
+        res.redirect('/posts');
+
+    } catch (err) {
+        console.error('DELETE POST ERROR:', err);
+        res.status(500).send('Server Error while deleting post');
+    }
+});
+
+/* =========================================================
+   SAVE / UNSAVE POST
 ========================================================= */
 router.post('/:id/save', async (req, res) => {
     try {
@@ -611,7 +904,7 @@ router.get('/:id', async (req, res) => {
 });
 
 /* =========================================================
-   LIKE A POST
+   LIKE POST
 ========================================================= */
 router.get('/:id/like', async (req, res) => {
     try {
@@ -624,7 +917,7 @@ router.get('/:id/like', async (req, res) => {
             [req.params.id]
         );
 
-        res.redirect('/posts/' + req.params.id);
+        res.redirect(`/posts/${req.params.id}`);
 
     } catch (err) {
         console.error('LIKE POST ERROR:', err);
@@ -633,7 +926,7 @@ router.get('/:id/like', async (req, res) => {
 });
 
 /* =========================================================
-   RATE A POST
+   RATE POST
 ========================================================= */
 router.post('/:id/rate', async (req, res) => {
     try {
@@ -644,7 +937,7 @@ router.post('/:id/rate', async (req, res) => {
         const rating = Number(req.body.rating);
 
         if (!rating || rating < 1 || rating > 5) {
-            return res.redirect('/posts/' + req.params.id);
+            return res.redirect(`/posts/${req.params.id}`);
         }
 
         await db.query(
@@ -652,7 +945,7 @@ router.post('/:id/rate', async (req, res) => {
             [rating, req.params.id]
         );
 
-        res.redirect('/posts/' + req.params.id);
+        res.redirect(`/posts/${req.params.id}`);
 
     } catch (err) {
         console.error('RATE POST ERROR:', err);
@@ -674,7 +967,7 @@ router.post('/:id/comment', async (req, res) => {
         const postId = req.params.id;
 
         if (!content || !content.trim()) {
-            return res.redirect('/posts/' + postId);
+            return res.redirect(`/posts/${postId}`);
         }
 
         await db.query(
@@ -686,7 +979,7 @@ router.post('/:id/comment', async (req, res) => {
             [postId, userId, content.trim()]
         );
 
-        res.redirect('/posts/' + postId);
+        res.redirect(`/posts/${postId}`);
 
     } catch (err) {
         console.error('ADD COMMENT ERROR:', err);
@@ -709,7 +1002,7 @@ router.post('/:id/comment/:commentId/reply', async (req, res) => {
         const parentId = req.params.commentId;
 
         if (!content || !content.trim()) {
-            return res.redirect('/posts/' + postId);
+            return res.redirect(`/posts/${postId}`);
         }
 
         const [parentRows] = await db.query(

@@ -1,46 +1,87 @@
 extends layout
 
 block content
-  .card
-    h2 ✏️ Edit Post
+  .profile-page
+    .profile-card
+      .profile-card-head
+        div
+          h2 ✏️ Edit Post
+          p.profile-muted Update your post title, category, image, video, and content.
 
-    form(action=`/posts/${post.id}/edit` method="POST" enctype="multipart/form-data")
-      div(style="margin-bottom:16px;")
-        label Title
-        br
-        input(type="text" name="title" value=post.title required style="width:100%; padding:8px; margin-top:4px;")
+        a.profile-secondary-btn(href=`/posts/${post.id}`) Cancel
 
-      div(style="margin-bottom:16px;")
-        label Category
-        br
-        select(name="category" style="width:100%; padding:8px; margin-top:4px;")
-          option(value="FPS" selected=post.category==='FPS') FPS
-          option(value="RPG" selected=post.category==='RPG') RPG
-          option(value="Tips" selected=post.category==='Tips') Tips
-          option(value="Mobile" selected=post.category==='Mobile') Mobile
-          option(value="Indie" selected=post.category==='Indie') Indie
-          option(value="Other" selected=post.category==='Other') Other
+      form.profile-edit-form(action=`/posts/${post.id}/edit`, method="POST", enctype="multipart/form-data")
+        .profile-form-grid
+          .form-group.full
+            label(for="title") Title
+            input(
+              type="text"
+              id="title"
+              name="title"
+              value=post.title
+              placeholder="Post title..."
+              required
+            )
 
-      if post.image
-        div(style="margin-bottom:16px;")
-          p Current Image
-          img(src=post.image style="max-width:300px; max-height:200px; object-fit:contain; background:#111; border-radius:10px;")
+          .form-group
+            label(for="category") Category
+            select(id="category", name="category", required)
+              option(value="FPS", selected=post.category === "FPS") FPS
+              option(value="RPG", selected=post.category === "RPG") RPG
+              option(value="Tips", selected=post.category === "Tips") Tips
+              option(value="Guide", selected=post.category === "Guide") Guide
+              option(value="Review", selected=post.category === "Review") Review
+              option(value="Mobile", selected=post.category === "Mobile") Mobile
+              option(value="Indie", selected=post.category === "Indie") Indie
+              option(value="Other", selected=post.category === "Other") Other
 
-      div(style="margin-bottom:16px;")
-        label Upload New Image
-        br
-        input(type="file" name="image" accept="image/*" style="width:100%; padding:8px; margin-top:4px;")
+          .form-group
+            label(for="image") Upload New Image
+            input(
+              type="file"
+              id="image"
+              name="image"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+            )
+            small Leave this empty if you want to keep the current image.
 
-      div(style="margin-bottom:16px;")
-        label Video URL (optional)
-        br
-        input(type="text" name="video" value=post.video || '' placeholder="https://www.youtube.com/embed/..." style="width:100%; padding:8px; margin-top:4px;")
+          if post.image
+            .form-group.full
+              label Current Image
+              .post-image-frame
+                img(src=post.image, alt=post.title)
 
-      div(style="margin-bottom:16px;")
-        label Content
-        br
-        textarea(name="content" rows="6" required style="width:100%; padding:8px; margin-top:4px;")= post.content
+          .form-group.full
+            label(for="image_url") Or Replace With Image URL
+            input(
+              type="url"
+              id="image_url"
+              name="image_url"
+              value=post.image && !post.image.startsWith('/uploads/') ? post.image : ''
+              placeholder="https://example.com/image.jpg"
+            )
+            small If you upload a new image, the uploaded image will be used instead of this URL.
 
-      button(type="submit" style="padding:10px 24px; margin-right:10px;") 💾 Save Changes
-      a(href=`/posts/${post.id}`)
-        button(type="button" style="padding:10px 24px;") Cancel
+          .form-group.full
+            label(for="video") YouTube Video URL
+            input(
+              type="url"
+              id="video"
+              name="video"
+              value=post.video || ''
+              placeholder="https://www.youtube.com/watch?v=VIDEO_ID"
+            )
+            small You can paste a normal YouTube link. The app will convert it to an embed link automatically.
+
+          .form-group.full
+            label(for="content") Content
+            textarea(
+              id="content"
+              name="content"
+              rows="8"
+              placeholder="Write your post..."
+              required
+            )= post.content
+
+        .profile-form-actions
+          button.profile-action-btn(type="submit") 💾 Save Changes
