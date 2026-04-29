@@ -1,0 +1,202 @@
+extends layout
+
+mixin miniPostCard(post)
+  - const image = post.image || "https://placehold.co/900x520/0f172a/f8fafc?text=Gaming+Post"
+  - const comments = Number(post.comment_count || post.comments_count || post.total_comments || 0)
+  - const likes = Number(post.likes || 0)
+  - const views = Number(post.views || 0)
+  - const rating = post.rating ? Number(post.rating).toFixed(1) : '0.0'
+
+  article.home-post-card
+    a.home-post-image(href=`/posts/${post.id}`)
+      img(src=image, alt=post.title)
+
+    .home-post-content
+      .home-post-meta
+        span= post.category || 'Gaming'
+        span ⭐ #{rating}
+
+      h3
+        a(href=`/posts/${post.id}`)= post.title
+
+      p= post.content && post.content.length > 110 ? post.content.substring(0, 110) + '...' : post.content
+
+      .home-post-stats
+        span 💜 #{likes}
+        span 👁 #{views}
+        span 💬 #{comments}
+
+      .home-post-author
+        span By #{post.username || 'Unknown'}
+        a(href=`/posts/${post.id}`) Read →
+
+
+block content
+  - const safeStats = typeof stats !== 'undefined' && stats ? stats : {}
+  - const safeTrending = typeof trendingPosts !== 'undefined' && trendingPosts ? trendingPosts : []
+  - const safeGuides = typeof latestGuides !== 'undefined' && latestGuides ? latestGuides : []
+  - const safeRated = typeof topRatedPosts !== 'undefined' && topRatedPosts ? topRatedPosts : []
+  - const safeGames = typeof popularGames !== 'undefined' && popularGames ? popularGames : []
+  - const safeCreators = typeof topCreators !== 'undefined' && topCreators ? topCreators : []
+  - const safeDiscussions = typeof recentDiscussions !== 'undefined' && recentDiscussions ? recentDiscussions : []
+  - const videoPost = typeof featuredVideo !== 'undefined' ? featuredVideo : null
+
+  .home-page
+    section.home-hero
+      .home-hero-glow
+      .home-hero-content
+        span.home-eyebrow Gaming Community
+        h1 Discover tips, tricks, guides, and creators for your favorite games.
+        p Level up with community-made guides, walkthroughs, hidden tricks, videos, reviews, and discussions.
+
+        .home-hero-actions
+          a.home-primary-btn(href="/posts") Browse Posts
+          if currentUser
+            a.home-secondary-btn(href="/posts/create") Create Post
+            a.home-secondary-btn(href="/posts/saved") Saved Posts
+          else
+            a.home-secondary-btn(href="/login") Login
+            a.home-secondary-btn(href="/register") Register
+
+    section.home-stat-grid
+      .home-stat-card
+        strong= safeStats.totalMembers || 0
+        span Members
+
+      .home-stat-card
+        strong= safeStats.totalPosts || 0
+        span Posts
+
+      .home-stat-card
+        strong= safeStats.totalComments || 0
+        span Comments
+
+      .home-stat-card
+        strong= safeStats.totalViews || 0
+        span Total Views
+
+    .home-layout
+      main.home-main
+        section.home-section
+          .home-section-head
+            div
+              span.home-section-kicker 🔥 Trending This Week
+              h2 Trending Posts
+            a.home-view-link(href="/posts") View all
+
+          if safeTrending.length
+            .home-post-grid
+              each post in safeTrending
+                +miniPostCard(post)
+          else
+            .home-empty-card
+              h3 No trending posts yet
+              p Create the first post and start the community activity.
+
+        section.home-section
+          .home-section-head
+            div
+              span.home-section-kicker ⭐ Top Rated Guides
+              h2 Best Rated Posts
+            a.home-view-link(href="/posts") Explore
+
+          if safeRated.length
+            .home-post-grid
+              each post in safeRated
+                +miniPostCard(post)
+          else
+            .home-empty-card
+              h3 No rated posts yet
+              p Posts will appear here once users start rating them.
+
+        section.home-section
+          .home-section-head
+            div
+              span.home-section-kicker 📘 Latest Guides
+              h2 Fresh Tips and Guides
+            a.home-view-link(href="/posts?category=Guide") More guides
+
+          if safeGuides.length
+            .home-post-grid
+              each post in safeGuides
+                +miniPostCard(post)
+          else
+            .home-empty-card
+              h3 No guides yet
+              p Add posts under Guide, Tips, Tricks, or Review to show them here.
+
+        if videoPost
+          section.home-section
+            .home-section-head
+              div
+                span.home-section-kicker 🎥 Featured Video Post
+                h2= videoPost.title
+              a.home-view-link(href=`/posts/${videoPost.id}`) Open post
+
+            .home-featured-video-card
+              .home-video-frame
+                iframe(
+                  src=videoPost.video
+                  title=videoPost.title
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowfullscreen
+                )
+
+              .home-video-copy
+                span.home-category-pill= videoPost.category || 'Gaming'
+                h3= videoPost.title
+                p= videoPost.content && videoPost.content.length > 180 ? videoPost.content.substring(0, 180) + '...' : videoPost.content
+                a.home-primary-btn(href=`/posts/${videoPost.id}`) Watch and Read
+
+      aside.home-sidebar
+        .home-side-card
+          h3 🎮 Popular Games
+          if safeGames.length
+            .home-game-list
+              each game in safeGames
+                a.home-game-row(href=`/posts?category=${encodeURIComponent(game.category)}`)
+                  span= game.category
+                  strong #{game.post_count} posts
+          else
+            p.home-muted No categories yet.
+
+        .home-side-card
+          h3 👑 Top Creators
+          if safeCreators.length
+            .home-creator-list
+              each creator, index in safeCreators
+                - const initial = creator.username ? creator.username.charAt(0).toUpperCase() : 'U'
+                a.home-creator-row(href=`/users/${creator.id}`)
+                  .home-creator-left
+                    if creator.avatar_url
+                      img.home-creator-avatar-img(src=creator.avatar_url, alt=creator.username)
+                    else
+                      .home-creator-avatar= initial
+
+                    .home-creator-copy
+                      strong= creator.username
+                      span #{creator.post_count || 0} posts · #{creator.follower_count || 0} followers
+
+                  .home-rank ##{index + 1}
+          else
+            p.home-muted No creators yet.
+
+        .home-side-card
+          h3 💬 Recent Discussions
+          if safeDiscussions.length
+            .home-discussion-list
+              each item in safeDiscussions
+                a.home-discussion-row(href=`/posts/${item.post_id}#comment-${item.id}`)
+                  strong= item.username
+                  span commented on #{item.post_title}
+                  p= item.comment && item.comment.length > 80 ? item.comment.substring(0, 80) + '...' : item.comment
+          else
+            p.home-muted No comments yet.
+
+        .home-side-card.home-cta-card
+          h3 Ready to share a trick?
+          p.home-muted Post your best gaming guide, hidden trick, review, or walkthrough.
+          if currentUser
+            a.home-primary-btn(href="/posts/create") Create Post
+          else
+            a.home-primary-btn(href="/login") Login to Post

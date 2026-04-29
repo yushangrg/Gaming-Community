@@ -301,10 +301,252 @@ app.post('/profile/update', async (req, res) => {
 });
 
 /* =========================================================
-   HOME
+   HOME DASHBOARD
 ========================================================= */
-app.get('/', (req, res) => {
-    res.redirect('/posts');
+app.get('/', async (req, res) => {
+    try {
+        const currentUserId = req.session.user ? req.session.user.id : 0;
+
+        const [statsRows] = await db.query(`
+            SELECT
+                (SELECT COUNT(*) FROM users) AS totalMembers,
+                (SELECT COUNT(*) FROM posts) AS totalPosts,
+                (SELECT COUNT(*) FROM comments) AS totalComments,
+                (SELECT COALESCE(SUM(views), 0) FROM posts) AS totalViews
+        `);
+
+        const stats = {
+            totalMembers: Number(statsRows[0].totalMembers || 0),
+            totalPosts: Number(statsRows[0].totalPosts || 0),
+            totalComments: Number(statsRows[0].totalComments || 0),
+            totalViews: Number(statsRows[0].totalViews || 0)
+        };
+
+        const [trendingPosts] = await db.query(
+            `
+            SELECT
+                posts.*,
+                users.username,
+
+                COALESCE(comment_counts.total_comments, 0) AS comment_count,
+                COALESCE(comment_counts.total_comments, 0) AS comments_count,
+                COALESCE(comment_counts.total_comments, 0) AS total_comments,
+
+                COALESCE(save_counts.total_saves, 0) AS save_count,
+
+                EXISTS (
+                    SELECT 1
+                    FROM saved_posts
+                    WHERE saved_posts.post_id = posts.id
+                    AND saved_posts.user_id = ?
+                ) AS is_saved,
+
+                (
+                    (COALESCE(posts.likes, 0) * 5) +
+                    (COALESCE(posts.views, 0) * 1) +
+                    (COALESCE(comment_counts.total_comments, 0) * 4) +
+                    (COALESCE(save_counts.total_saves, 0) * 6)
+                ) AS trending_score
+
+            FROM posts
+
+            JOIN users ON posts.user_id = users.id
+
+            LEFT JOIN (
+                SELECT post_id, COUNT(*) AS total_comments
+                FROM comments
+                GROUP BY post_id
+            ) AS comment_counts ON comment_counts.post_id = posts.id
+
+            LEFT JOIN (
+                SELECT post_id, COUNT(*) AS total_saves
+                FROM saved_posts
+                GROUP BY post_id
+            ) AS save_counts ON save_counts.post_id = posts.id
+
+            ORDER BY trending_score DESC, posts.id DESC
+            LIMIT 4
+            `,
+            [currentUserId]
+        );
+
+        const [latestGuides] = await db.query(
+            `
+            SELECT
+                posts.*,
+                users.username,
+
+                COALESCE(comment_counts.total_comments, 0) AS comment_count,
+                COALESCE(comment_counts.total_comments, 0) AS comments_count,
+                COALESCE(comment_counts.total_comments, 0) AS total_comments,
+
+                COALESCE(save_counts.total_saves, 0) AS save_count
+
+            FROM posts
+
+            JOIN users ON posts.user_id = users.id
+
+            LEFT JOIN (
+                SELECT post_id, COUNT(*) AS total_comments
+                FROM comments
+                GROUP BY post_id
+            ) AS comment_counts ON comment_counts.post_id = posts.id
+
+            LEFT JOIN (
+                SELECT post_id, COUNT(*) AS total_saves
+                FROM saved_posts
+                GROUP BY post_id
+            ) AS save_counts ON save_counts.post_id = posts.id
+
+            WHERE posts.category IN ('Guide', 'Tips', 'Tricks', 'Review', 'FPS', 'RPG', 'Mobile', 'Indie')
+            ORDER BY posts.id DESC
+            LIMIT 4
+            `
+        );
+
+        const [topRatedPosts] = await db.query(
+            `
+            SELECT
+                posts.*,
+                users.username,
+
+                COALESCE(comment_counts.total_comments, 0) AS comment_count,
+                COALESCE(comment_counts.total_comments, 0) AS comments_count,
+                COALESCE(comment_counts.total_comments, 0) AS total_comments,
+
+                COALESCE(save_counts.total_saves, 0) AS save_count
+
+            FROM posts
+
+            JOIN users ON posts.user_id = users.id
+
+            LEFT JOIN (
+                SELECT post_id, COUNT(*) AS total_comments
+                FROM comments
+                GROUP BY post_id
+            ) AS comment_counts ON comment_counts.post_id = posts.id
+
+            LEFT JOIN (
+                SELECT post_id, COUNT(*) AS total_saves
+                FROM saved_posts
+                GROUP BY post_id
+            ) AS save_counts ON save_counts.post_id = posts.id
+
+            WHERE COALESCE(posts.rating, 0) > 0
+            ORDER BY posts.rating DESC, posts.likes DESC, posts.views DESC, posts.id DESC
+            LIMIT 4
+            `
+        );
+
+        const [popularGames] = await db.query(
+            `
+            SELECT
+                category,
+                COUNT(*) AS post_count,
+                COALESCE(SUM(likes), 0) AS total_likes,
+                COALESCE(SUM(views), 0) AS total_views
+            FROM posts
+            WHERE category IS NOT NULL AND category <> ''
+            GROUP BY category
+            ORDER BY post_count DESC, total_likes DESC, total_views DESC
+            LIMIT 8
+            `
+        );
+
+        const [topCreators] = await db.query(
+            `
+            SELECT
+                users.id,
+                users.username,
+                users.avatar_url,
+                users.favorite_game,
+
+                COUNT(DISTINCT posts.id) AS post_count,
+                COALESCE(SUM(posts.likes), 0) AS total_likes,
+                COALESCE(SUM(posts.views), 0) AS total_views,
+                COALESCE(follower_counts.total_followers, 0) AS follower_count,
+
+                (
+                    (COUNT(DISTINCT posts.id) * 25) +
+                    (COALESCE(SUM(posts.likes), 0) * 5) +
+                    (COALESCE(follower_counts.total_followers, 0) * 15)
+                ) AS creator_score
+
+            FROM users
+
+            LEFT JOIN posts ON posts.user_id = users.id
+
+            LEFT JOIN (
+                SELECT following_id, COUNT(*) AS total_followers
+                FROM user_follows
+                GROUP BY following_id
+            ) AS follower_counts ON follower_counts.following_id = users.id
+
+            GROUP BY
+                users.id,
+                users.username,
+                users.avatar_url,
+                users.favorite_game,
+                follower_counts.total_followers
+
+            ORDER BY creator_score DESC, post_count DESC, users.username ASC
+            LIMIT 5
+            `
+        );
+
+        const [recentDiscussions] = await db.query(
+            `
+            SELECT
+                comments.id,
+                comments.comment,
+                comments.created_at,
+                comments.post_id,
+                users.username,
+                posts.title AS post_title
+            FROM comments
+
+            JOIN users ON comments.user_id = users.id
+            JOIN posts ON comments.post_id = posts.id
+
+            ORDER BY comments.created_at DESC
+            LIMIT 5
+            `
+        );
+
+        const [featuredVideoRows] = await db.query(
+            `
+            SELECT
+                posts.*,
+                users.username
+            FROM posts
+
+            JOIN users ON posts.user_id = users.id
+
+            WHERE posts.video IS NOT NULL AND posts.video <> ''
+            ORDER BY posts.views DESC, posts.likes DESC, posts.id DESC
+            LIMIT 1
+            `
+        );
+
+        const featuredVideo = featuredVideoRows.length ? featuredVideoRows[0] : null;
+
+        res.render('home', {
+            stats,
+            trendingPosts,
+            latestGuides,
+            topRatedPosts,
+            popularGames,
+            topCreators,
+            recentDiscussions,
+            featuredVideo,
+            user: req.session.user || null,
+            currentUser: req.session.user || null
+        });
+
+    } catch (err) {
+        console.error('HOME DASHBOARD ERROR:', err);
+        res.status(500).send('Server Error');
+    }
 });
 
 /* =========================================================
