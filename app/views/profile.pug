@@ -1,7 +1,34 @@
 extends layout
 
 block content
-  if !user
+  - const profileUser = typeof user !== 'undefined' && user ? user : null
+  - const safePosts = typeof posts !== 'undefined' && posts ? posts : []
+  - const safeBestPosts = typeof bestPosts !== 'undefined' && bestPosts ? bestPosts : safePosts.slice(0, 5)
+  - const safeActivity = typeof recentActivity !== 'undefined' && recentActivity ? recentActivity : []
+  - const safeFavoriteGames = typeof favoriteGames !== 'undefined' && favoriteGames ? favoriteGames : []
+  - const safeStats = typeof stats !== 'undefined' && stats ? stats : {}
+  - const safeBadges = typeof badges !== 'undefined' && badges ? badges : (profileUser && profileUser.badges ? profileUser.badges : [])
+  - const username = profileUser ? (profileUser.username || 'Your Profile') : 'Your Profile'
+  - const userInitial = username ? username.charAt(0).toUpperCase() : 'U'
+  - const avatar = profileUser && profileUser.avatar_url && profileUser.avatar_url.trim() ? profileUser.avatar_url : null
+  - const bio = profileUser && profileUser.bio ? profileUser.bio : 'Manage your gaming community profile, posts, and account activity.'
+  - const joinedRaw = profileUser ? (profileUser.joined_at || profileUser.created_at || null) : null
+  - const joinedDate = joinedRaw ? new Date(joinedRaw).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Not available'
+  - const postCount = Number(safeStats.postCount || safeStats.totalPosts || safeStats.total_posts || profileUser && profileUser.postCount || profileUser && profileUser.post_count || safePosts.length || 0)
+  - const totalLikes = Number(safeStats.totalLikes || safeStats.total_likes || profileUser && profileUser.totalLikes || profileUser && profileUser.total_likes || 0)
+  - const totalViews = Number(safeStats.totalViews || safeStats.total_views || profileUser && profileUser.totalViews || profileUser && profileUser.total_views || 0)
+  - const followersCount = Number(safeStats.followersCount || safeStats.followers_count || safeStats.followerCount || profileUser && profileUser.followersCount || profileUser && profileUser.followers_count || profileUser && profileUser.follower_count || 0)
+  - const followingCount = Number(safeStats.followingCount || safeStats.following_count || profileUser && profileUser.followingCount || profileUser && profileUser.following_count || 0)
+  - const savedPostsCount = Number(safeStats.savedPostsCount || safeStats.saved_posts_count || profileUser && profileUser.savedPostsCount || profileUser && profileUser.saved_posts_count || 0)
+  - const commentsCount = Number(safeStats.commentsCount || safeStats.comments_count || safeStats.totalComments || safeStats.total_comments || profileUser && profileUser.commentsCount || profileUser && profileUser.comments_count || 0)
+  - const commentsReceivedCount = Number(safeStats.commentsReceivedCount || safeStats.comments_received_count || profileUser && profileUser.commentsReceivedCount || profileUser && profileUser.comments_received_count || 0)
+  - const pointsValue = Number(safeStats.points || profileUser && profileUser.points || ((postCount * 25) + (totalLikes * 5) + (savedPostsCount * 10) + (followersCount * 15) + (commentsCount * 3)))
+  - const rankData = safeStats.rank || profileUser && profileUser.rank || null
+  - const rankLabel = rankData && rankData.label ? rankData.label : (profileUser && profileUser.rankLabel ? profileUser.rankLabel : 'Level 1 Rookie')
+  - const rankProgressValue = Math.max(0, Math.min(100, Number(safeStats.rankProgress || profileUser && profileUser.rankProgress || pointsValue % 100 || 0)))
+  - const formatDate = value => value ? new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recently'
+
+  if !profileUser
     .profile-page
       .profile-login-panel
         .profile-login-glow
@@ -9,7 +36,7 @@ block content
           .profile-login-icon 🎮
           span.profile-eyebrow Member Access
           h1 Access Your Profile
-          p Login or create an account to manage your profile, publish posts, comment, rate games, and join the community.
+          p Login or create an account to manage your profile, publish posts, comment, rate games, save posts, and follow creators.
 
           .profile-login-actions
             a.profile-action-btn(href="/login") Login
@@ -18,25 +45,23 @@ block content
           a.profile-guest-link(href="/posts") Continue browsing as guest
 
   else
-    - const userInitial = user.username ? user.username.charAt(0).toUpperCase() : 'U'
-    - const avatar = user.avatar_url && user.avatar_url.trim() ? user.avatar_url : null
-    - const safeStats = typeof stats !== 'undefined' ? stats : { postCount: 0, points: 0, totalViews: 0, totalLikes: 0 }
-
     .profile-page
       .profile-hero-panel
         .profile-hero-glow
         .profile-hero-content
           if avatar
-            img.profile-avatar-image(src=avatar alt=user.username)
+            img.profile-avatar-image(src=avatar alt=username)
           else
             .profile-avatar-large= userInitial
 
           span.profile-eyebrow Welcome back
-          h1= user.username
-          if user.bio
-            p= user.bio
-          else
-            p Manage your gaming community profile, posts, and account activity.
+          h1= username
+          p= bio
+
+          .profile-login-actions
+            a.profile-action-btn(href="/posts/create") Create Post
+            a.profile-secondary-btn(href="/posts/saved") Saved Posts
+            a.profile-secondary-btn(href=`/users/${profileUser.id}`) View Public Profile
 
       .profile-layout
         main.profile-main
@@ -44,72 +69,139 @@ block content
             .profile-card-head
               div
                 h2 Profile Overview
-                p.profile-muted Your public community information.
+                p.profile-muted Your public community information, rank, and gaming identity.
               a.profile-action-btn(href="/posts/create") Create Post
 
             .profile-info-grid
               .profile-info-box
                 span Username
-                strong= user.username
+                strong= username
 
               .profile-info-box
                 span Email
-                strong= user.email
+                strong= profileUser.email || 'Not added'
+
+              .profile-info-box
+                span Rank
+                strong= rankLabel
+
+              .profile-info-box
+                span Joined
+                strong= joinedDate
 
               .profile-info-box
                 span Location
-                strong= user.location || 'Not added'
+                strong= profileUser.location || 'Not added'
 
               .profile-info-box
                 span Favorite Game
-                strong= user.favorite_game || 'Not added'
+                strong= profileUser.favorite_game || 'Not added'
+
+              a.profile-info-box(href=`/users/${profileUser.id}/followers`)
+                span Followers
+                strong= followersCount
+
+              a.profile-info-box(href=`/users/${profileUser.id}/following`)
+                span Following
+                strong= followingCount
+
+              a.profile-info-box(href="/posts/saved")
+                span Saved Posts
+                strong= savedPostsCount
+
+              .profile-info-box
+                span Account ID
+                strong= '#' + profileUser.id
 
               .profile-info-box
                 span Website
-                if user.website
-                  a(href=user.website target="_blank")= user.website
+                if profileUser.website
+                  a(href=profileUser.website target="_blank" rel="noopener")= profileUser.website
                 else
                   strong Not added
 
               .profile-info-box
-                span Account ID
-                strong= user.id
+                span Community Points
+                strong= pointsValue
+
+          .profile-card
+            .profile-card-head
+              div
+                h2 Rank & Badges
+                p.profile-muted Earn points from posts, likes, saves, followers, and comments.
+
+            .profile-info-grid
+              .profile-info-box
+                span Current Level
+                strong= rankLabel
+                small #{rankProgressValue}% progress to next level
+
+                .user-progress
+                  .user-progress-bar(style=`width:${rankProgressValue}%`)
+
+              .profile-info-box
+                span Points
+                strong= pointsValue
+
+            if safeBadges.length
+              .user-profile-tags
+                each badge in safeBadges
+                  span.user-profile-tag= badge
+            else
+              .user-profile-tags
+                span.user-profile-tag New Member
 
           .profile-card
             .profile-card-head
               div
                 h2 Edit Profile
-                p.profile-muted Add a photo, bio, location, favorite game, and website.
+                p.profile-muted Add a photo, bio, location, favorite game, website, and social links.
 
             form.profile-edit-form(action="/profile/update" method="POST")
               .profile-form-grid
                 .form-group
                   label Username
-                  input(type="text" name="username" value=user.username required)
+                  input(type="text" name="username" value=profileUser.username || '' required)
 
                 .form-group
                   label Email
-                  input(type="email" name="email" value=user.email required)
+                  input(type="email" name="email" value=profileUser.email || '' required)
 
                 .form-group.full
                   label Profile Photo URL
-                  input(type="text" name="avatar_url" value=user.avatar_url || '' placeholder="https://example.com/photo.jpg")
+                  input(type="text" name="avatar_url" value=profileUser.avatar_url || '' placeholder="https://example.com/photo.jpg")
 
                 .form-group.full
                   label Bio
-                  textarea(name="bio" rows="4" placeholder="Write a short bio about yourself...")= user.bio || ''
+                  textarea(name="bio" rows="4" placeholder="Write a short bio about yourself...")= profileUser.bio || ''
 
                 .form-group
                   label Location
-                  input(type="text" name="location" value=user.location || '' placeholder="London, UK")
+                  input(type="text" name="location" value=profileUser.location || '' placeholder="London, UK")
 
                 .form-group
                   label Favorite Game
-                  input(type="text" name="favorite_game" value=user.favorite_game || '' placeholder="Elden Ring, GTA V, Fortnite...")
+                  input(type="text" name="favorite_game" value=profileUser.favorite_game || '' placeholder="Elden Ring, GTA V, Fortnite...")
 
                 .form-group.full
                   label Website
-                  input(type="text" name="website" value=user.website || '' placeholder="https://yourwebsite.com")
+                  input(type="text" name="website" value=profileUser.website || '' placeholder="https://yourwebsite.com")
+
+                .form-group
+                  label Twitter / X
+                  input(type="text" name="twitter_url" value=profileUser.twitter_url || '' placeholder="https://x.com/username")
+
+                .form-group
+                  label YouTube
+                  input(type="text" name="youtube_url" value=profileUser.youtube_url || '' placeholder="https://youtube.com/@username")
+
+                .form-group
+                  label Twitch
+                  input(type="text" name="twitch_url" value=profileUser.twitch_url || '' placeholder="https://twitch.tv/username")
+
+                .form-group
+                  label Discord Name
+                  input(type="text" name="discord_name" value=profileUser.discord_name || '' placeholder="username#0000")
 
               .profile-form-actions
                 button.profile-action-btn(type="submit") Save Profile
@@ -136,19 +228,69 @@ block content
                 strong Create Post
                 small Share your gaming content
 
-          if posts && posts.length
+          .profile-card
+            .profile-card-head
+              div
+                h2 My Best Posts
+                p.profile-muted Your strongest posts based on likes, saves, comments, and views.
+
+              a.profile-side-btn(href=`/posts?userId=${profileUser.id}`) View All
+
+            if safeBestPosts.length === 0
+              p.profile-muted You have not created any posts yet.
+            else
+              .profile-post-list
+                each post in safeBestPosts
+                  - const postComments = Number(post.comment_count || post.comments_count || post.total_comments || 0)
+                  - const postViews = Number(post.views || 0)
+                  - const postLikes = Number(post.likes || 0)
+                  - const postSaves = Number(post.save_count || 0)
+
+                  a.profile-post-item(href=`/posts/${post.id}`)
+                    .profile-post-content
+                      strong= post.title
+                      span #{post.category || 'Gaming'} • #{postLikes} likes • #{postSaves} saves • #{postComments} comments • #{postViews} views
+                    span.profile-post-arrow →
+
+          .profile-card
+            .profile-card-head
+              div
+                h2 Recent Activity
+                p.profile-muted Your latest posts and comments.
+
+            if safeActivity.length === 0
+              p.profile-muted No recent activity yet.
+            else
+              .profile-post-list
+                each activity in safeActivity
+                  - const activityIcon = activity.activity_type === 'comment' ? '💬' : '📝'
+                  - const activityText = activity.activity_text ? (activity.activity_text.length > 90 ? activity.activity_text.slice(0, 90) + '...' : activity.activity_text) : 'Activity'
+                  - const activityDate = formatDate(activity.activity_date)
+
+                  a.profile-post-item(href=activity.activity_link || '#')
+                    .profile-post-content
+                      strong #{activityIcon} #{activityText}
+                      span= activityDate
+                    span.profile-post-arrow →
+
+          if safePosts.length
             .profile-card
               .profile-card-head
                 div
                   h2 My Posts
                   p.profile-muted Posts you have shared with the community.
 
+                a.profile-side-btn(href="/posts/create") Create New
+
               .profile-post-list
-                each post in posts
+                each post in safePosts
+                  - const postType = post.post_type || post.type || 'Post'
+                  - const difficulty = post.difficulty || 'General'
+
                   a.profile-post-item(href=`/posts/${post.id}`)
                     .profile-post-content
                       strong= post.title
-                      span #{post.category || 'Gaming'} • #{post.comment_count || 0} comments • #{post.likes || 0} likes
+                      span #{post.category || 'Gaming'} • #{postType} • #{difficulty} • #{post.comment_count || 0} comments • #{post.likes || 0} likes
                     span.profile-post-arrow →
           else
             .profile-card
@@ -162,39 +304,107 @@ block content
             .profile-stat-list
               .profile-stat-row
                 span Posts
-                strong= safeStats.postCount
+                strong= postCount
+
+              a.profile-stat-row(href=`/users/${profileUser.id}/followers`)
+                span Followers
+                strong= followersCount
+
+              a.profile-stat-row(href=`/users/${profileUser.id}/following`)
+                span Following
+                strong= followingCount
+
+              a.profile-stat-row(href="/posts/saved")
+                span Saved Posts
+                strong= savedPostsCount
 
               .profile-stat-row
-                span Points
-                strong= safeStats.points
+                span Comments
+                strong= commentsCount
+
+              .profile-stat-row
+                span Comments Received
+                strong= commentsReceivedCount
 
               .profile-stat-row
                 span Total Likes
-                strong= safeStats.totalLikes
+                strong= totalLikes
 
               .profile-stat-row
                 span Total Views
-                strong= safeStats.totalViews
+                strong= totalViews
 
               .profile-stat-row
-                span Role
-                strong Member
+                span Points
+                strong= pointsValue
+
+              .profile-stat-row
+                span Rank
+                strong= rankLabel
 
           .profile-card
             h3 Public Profile
             if avatar
-              img.profile-sidebar-avatar(src=avatar alt=user.username)
+              img.profile-sidebar-avatar(src=avatar alt=username)
             else
               .profile-sidebar-avatar-fallback= userInitial
 
-            h4= user.username
-            p.profile-muted= user.bio || 'No bio added yet.'
+            h4= username
+            p.profile-muted= profileUser.bio || 'No bio added yet.'
 
-            if user.favorite_game
-              .profile-badge Favorite: #{user.favorite_game}
+            .profile-badge= rankLabel
 
-            if user.location
-              .profile-badge Location: #{user.location}
+            if profileUser.favorite_game
+              .profile-badge Favorite: #{profileUser.favorite_game}
+
+            if profileUser.location
+              .profile-badge Location: #{profileUser.location}
+
+          .profile-card
+            h3 Favorite Games
+
+            if safeFavoriteGames.length
+              .user-profile-tags
+                each game in safeFavoriteGames
+                  a.user-profile-tag(href=`/posts?category=${encodeURIComponent(game.name || game.category || game)}`)
+                    | #{game.name || game.category || game}
+            else if profileUser.favorite_game
+              .user-profile-tags
+                a.user-profile-tag(href=`/posts?category=${encodeURIComponent(profileUser.favorite_game)}`)= profileUser.favorite_game
+            else
+              p.profile-muted Add your favorite game in the edit form.
+
+          .profile-card
+            h3 Social Links
+
+            .profile-stat-list
+              if profileUser.website
+                a.profile-stat-row(href=profileUser.website target="_blank" rel="noopener")
+                  span Website
+                  strong Open
+
+              if profileUser.twitter_url
+                a.profile-stat-row(href=profileUser.twitter_url target="_blank" rel="noopener")
+                  span Twitter / X
+                  strong Open
+
+              if profileUser.youtube_url
+                a.profile-stat-row(href=profileUser.youtube_url target="_blank" rel="noopener")
+                  span YouTube
+                  strong Open
+
+              if profileUser.twitch_url
+                a.profile-stat-row(href=profileUser.twitch_url target="_blank" rel="noopener")
+                  span Twitch
+                  strong Open
+
+              if profileUser.discord_name
+                .profile-stat-row
+                  span Discord
+                  strong= profileUser.discord_name
+
+              if !profileUser.website && !profileUser.twitter_url && !profileUser.youtube_url && !profileUser.twitch_url && !profileUser.discord_name
+                p.profile-muted Add social links in the edit form.
 
           .profile-card
             h3 Community Tip

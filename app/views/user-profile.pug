@@ -1,29 +1,44 @@
 extends layout
 
 block content
-  - const viewedUser = typeof profileUser !== 'undefined' && profileUser ? profileUser : (typeof viewedUserData !== 'undefined' && viewedUserData ? viewedUserData : null)
-  - const viewer = (typeof currentUser !== 'undefined' && currentUser) ? currentUser : (typeof user !== 'undefined' && user ? user : null)
+  - const viewedUser = typeof profileUser !== 'undefined' && profileUser ? profileUser : null
+  - const viewer = (typeof currentUser !== 'undefined' && currentUser) ? currentUser : (typeof user !== 'undefined' ? user : null)
   - const safePosts = typeof posts !== 'undefined' && posts ? posts : []
+  - const safeBestPosts = typeof bestPosts !== 'undefined' && bestPosts ? bestPosts : safePosts.slice(0, 5)
+  - const safeActivity = typeof recentActivity !== 'undefined' && recentActivity ? recentActivity : []
+  - const safeFavoriteGames = typeof favoriteGames !== 'undefined' && favoriteGames ? favoriteGames : []
   - const safeStats = typeof stats !== 'undefined' && stats ? stats : {}
-
-  - const username = viewedUser ? (viewedUser.username || viewedUser.name || 'Unknown User') : 'Unknown User'
+  - const safeSocialLinks = typeof socialLinks !== 'undefined' && socialLinks ? socialLinks : {}
+  - const username = viewedUser ? (viewedUser.username || 'Unknown User') : 'Unknown User'
   - const initial = username.charAt(0).toUpperCase()
   - const avatar = viewedUser ? (viewedUser.avatar_url || viewedUser.avatar || viewedUser.photo || viewedUser.profile_photo || null) : null
   - const bio = viewedUser && viewedUser.bio ? viewedUser.bio : 'This member has not added a bio yet.'
   - const location = viewedUser && viewedUser.location ? viewedUser.location : 'Not added'
   - const website = viewedUser && viewedUser.website ? viewedUser.website : ''
   - const favoriteGame = viewedUser && viewedUser.favorite_game ? viewedUser.favorite_game : 'Not added'
-  - const platform = viewedUser && viewedUser.platform ? viewedUser.platform : 'Not added'
-
-  - const totalPosts = Number(safeStats.postCount || safeStats.total_posts || viewedUser && viewedUser.post_count || safePosts.length || 0)
-  - const totalLikes = Number(safeStats.totalLikes || safeStats.total_likes || viewedUser && viewedUser.total_likes || 0)
-  - const totalViews = Number(safeStats.totalViews || safeStats.total_views || viewedUser && viewedUser.total_views || 0)
-  - const totalComments = Number(safeStats.totalComments || safeStats.total_comments || safePosts.reduce((sum, post) => sum + Number(post.comment_count || post.comments_count || post.total_comments || 0), 0))
-  - const followerCount = Number(safeStats.followerCount || viewedUser && (viewedUser.follower_count || viewedUser.followers_count) || 0)
-  - const followingCount = Number(safeStats.followingCount || viewedUser && viewedUser.following_count || 0)
-  - const points = Number(safeStats.points || ((totalPosts * 25) + (totalLikes * 5)))
+  - const joinedRaw = viewedUser ? (viewedUser.joined_at || viewedUser.created_at || null) : null
+  - const joinedDate = joinedRaw ? new Date(joinedRaw).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Not available'
+  - const totalPosts = Number(safeStats.postCount || safeStats.totalPosts || safeStats.total_posts || viewedUser && viewedUser.postCount || viewedUser && viewedUser.post_count || safePosts.length || 0)
+  - const totalLikes = Number(safeStats.totalLikes || safeStats.total_likes || viewedUser && viewedUser.totalLikes || viewedUser && viewedUser.total_likes || 0)
+  - const totalViews = Number(safeStats.totalViews || safeStats.total_views || viewedUser && viewedUser.totalViews || viewedUser && viewedUser.total_views || 0)
+  - const followersCount = Number(safeStats.followersCount || safeStats.followers_count || safeStats.followerCount || viewedUser && viewedUser.followersCount || viewedUser && viewedUser.followers_count || viewedUser && viewedUser.follower_count || 0)
+  - const followingCount = Number(safeStats.followingCount || safeStats.following_count || viewedUser && viewedUser.followingCount || viewedUser && viewedUser.following_count || 0)
+  - const savedPostsCount = Number(safeStats.savedPostsCount || safeStats.saved_posts_count || viewedUser && viewedUser.savedPostsCount || viewedUser && viewedUser.saved_posts_count || 0)
+  - const commentsCount = Number(safeStats.commentsCount || safeStats.comments_count || safeStats.totalComments || safeStats.total_comments || viewedUser && viewedUser.commentsCount || viewedUser && viewedUser.comments_count || 0)
+  - const commentsReceivedCount = Number(safeStats.commentsReceivedCount || safeStats.comments_received_count || viewedUser && viewedUser.commentsReceivedCount || viewedUser && viewedUser.comments_received_count || 0)
+  - const pointsValue = Number(typeof points !== 'undefined' ? points : (safeStats.points || viewedUser && viewedUser.points || 0))
+  - const rankData = typeof rank !== 'undefined' && rank ? rank : (safeStats.rank || viewedUser && viewedUser.rank || null)
+  - const rankLabel = rankData && rankData.label ? rankData.label : (viewedUser && viewedUser.rankLabel ? viewedUser.rankLabel : 'Level 1 Rookie')
+  - const rankProgressValue = Math.max(0, Math.min(100, Number(typeof rankProgress !== 'undefined' ? rankProgress : (safeStats.rankProgress || viewedUser && viewedUser.rankProgress || 0))))
+  - const safeBadges = typeof badges !== 'undefined' && badges ? badges : (viewedUser && viewedUser.badges ? viewedUser.badges : [])
   - const isOwnProfile = viewedUser && viewer && Number(viewer.id) === Number(viewedUser.id)
-  - const isFollowing = viewedUser && (viewedUser.isFollowing || viewedUser.is_following)
+  - const isFollowing = viewedUser && Boolean(viewedUser.isFollowing || viewedUser.is_following)
+  - const websiteHref = website && !website.startsWith('http') ? `https://${website}` : website
+  - const twitterUrl = safeSocialLinks.twitter || (viewedUser && viewedUser.twitter_url) || ''
+  - const youtubeUrl = safeSocialLinks.youtube || (viewedUser && viewedUser.youtube_url) || ''
+  - const twitchUrl = safeSocialLinks.twitch || (viewedUser && viewedUser.twitch_url) || ''
+  - const discordName = safeSocialLinks.discord || (viewedUser && viewedUser.discord_name) || ''
+  - const formatDate = value => value ? new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recently'
 
   .profile-page
     if !viewedUser
@@ -51,23 +66,22 @@ block content
           p= bio
 
           .profile-login-actions
-            a.profile-action-btn(href=`/posts?user=${viewedUser.id}`) View Posts
-            a.profile-secondary-btn(href=`/users/${viewedUser.id}/followers`) Followers
-            a.profile-secondary-btn(href=`/users/${viewedUser.id}/following`) Following
-            a.profile-secondary-btn(href="/users") Back to Users
+            a.profile-action-btn(href=`/posts?userId=${viewedUser.id}`) View Posts
 
-            if isOwnProfile
-              a.profile-action-btn(href="/posts/saved") 💾 My Saved Posts
-            else if viewer
-              form(action=`/users/${viewedUser.id}/follow`, method="POST")
-                input(type="hidden", name="redirect", value=`/users/${viewedUser.id}`)
-                button.profile-action-btn(type="submit")
+            if viewer && !isOwnProfile
+              form(action=`/users/${viewedUser.id}/follow` method="POST")
+                input(type="hidden" name="redirect" value=`/users/${viewedUser.id}`)
+                button(type="submit" class=isFollowing ? 'profile-action-btn is-following' : 'profile-action-btn')
                   if isFollowing
                     | ✓ Following
                   else
                     | + Follow
+            else if isOwnProfile
+              a.profile-secondary-btn(href="/profile") Edit My Profile
             else
-              a.profile-action-btn(href="/login") Login to Follow
+              a.profile-secondary-btn(href="/login") Login to Follow
+
+            a.profile-secondary-btn(href="/users") Back to Users
 
       .profile-layout
         main.profile-main
@@ -83,20 +97,28 @@ block content
                 strong= username
 
               .profile-info-box
-                span Location
-                strong= location
+                span Rank
+                strong= rankLabel
+
+              .profile-info-box
+                span Joined
+                strong= joinedDate
 
               .profile-info-box
                 span Favorite Game
                 strong= favoriteGame
 
               .profile-info-box
-                span Platform
-                strong= platform
+                span Location
+                strong= location
+
+              .profile-info-box
+                span Community Points
+                strong= pointsValue
 
               a.profile-info-box(href=`/users/${viewedUser.id}/followers`)
                 span Followers
-                strong= followerCount
+                strong= followersCount
 
               a.profile-info-box(href=`/users/${viewedUser.id}/following`)
                 span Following
@@ -105,25 +127,49 @@ block content
               if website
                 .profile-info-box
                   span Website
-                  a(href=website target="_blank" rel="noopener")= website
+                  a(href=websiteHref target="_blank" rel="noopener")= website
 
               .profile-info-box
                 span Member ID
-                strong ##{viewedUser.id}
+                strong= '#' + viewedUser.id
 
           .profile-card
             .profile-card-head
               div
-                h2 Posts by #{username}
-                p.profile-muted Latest posts shared by this community member.
+                h2 Rank & Badges
+                p.profile-muted Profile rewards based on posts, likes, saves, follows, and comments.
 
-              a.profile-side-btn(href=`/posts?user=${viewedUser.id}`) View All
+            .profile-info-grid
+              .profile-info-box
+                span Current Level
+                strong= rankLabel
+                small #{rankProgressValue}% progress to next level
 
-            if safePosts.length === 0
+              .profile-info-box
+                span Points
+                strong= pointsValue
+
+            if safeBadges.length
+              .user-profile-tags
+                each badge in safeBadges
+                  span.user-profile-tag= badge
+            else
+              .user-profile-tags
+                span.user-profile-tag New Member
+
+          .profile-card
+            .profile-card-head
+              div
+                h2 Best Posts
+                p.profile-muted Highest performing posts from this creator.
+
+              a.profile-side-btn(href=`/posts?userId=${viewedUser.id}`) View All
+
+            if safeBestPosts.length === 0
               p.profile-muted This user has not shared any posts yet.
             else
               .profile-post-list
-                each post in safePosts
+                each post in safeBestPosts
                   - const postComments = Number(post.comment_count || post.comments_count || post.total_comments || 0)
                   - const postViews = Number(post.views || 0)
                   - const postLikes = Number(post.likes || 0)
@@ -133,6 +179,52 @@ block content
                     .profile-post-content
                       strong= post.title
                       span #{post.category || 'Gaming'} · #{postLikes} likes · #{postSaves} saves · #{postComments} comments · #{postViews} views
+                    .profile-post-arrow →
+
+          .profile-card
+            .profile-card-head
+              div
+                h2 Recent Activity
+                p.profile-muted Latest posts and comments from #{username}.
+
+            if safeActivity.length === 0
+              p.profile-muted No recent activity yet.
+            else
+              .profile-post-list
+                each activity in safeActivity
+                  - const activityIcon = activity.activity_type === 'comment' ? '💬' : '📝'
+                  - const activityText = activity.activity_text ? (activity.activity_text.length > 90 ? activity.activity_text.slice(0, 90) + '...' : activity.activity_text) : 'Activity'
+                  - const activityDate = formatDate(activity.activity_date)
+
+                  a.profile-post-item(href=activity.activity_link || '#')
+                    .profile-post-content
+                      strong #{activityIcon} #{activityText}
+                      span= activityDate
+                    .profile-post-arrow →
+
+          .profile-card
+            .profile-card-head
+              div
+                h2 Posts by #{username}
+                p.profile-muted Latest posts shared by this community member.
+
+              a.profile-side-btn(href=`/posts?userId=${viewedUser.id}`) View All
+
+            if safePosts.length === 0
+              p.profile-muted This user has not shared any posts yet.
+            else
+              .profile-post-list
+                each post in safePosts
+                  - const postComments = Number(post.comment_count || post.comments_count || post.total_comments || 0)
+                  - const postViews = Number(post.views || 0)
+                  - const postLikes = Number(post.likes || 0)
+                  - const postType = post.post_type || post.type || 'Post'
+                  - const difficulty = post.difficulty || 'General'
+
+                  a.profile-post-item(href=`/posts/${post.id}`)
+                    .profile-post-content
+                      strong= post.title
+                      span #{post.category || 'Gaming'} · #{postType} · #{difficulty} · #{postLikes} likes · #{postComments} comments · #{postViews} views
                     .profile-post-arrow →
 
         aside.profile-sidebar
@@ -145,22 +237,16 @@ block content
             h3= username
             p.profile-muted= bio
 
-            if isOwnProfile
-              .profile-badge Your Public Profile
-            else
-              .profile-badge Public Profile
+            .profile-badge= rankLabel
 
-            if !isOwnProfile
-              if viewer
-                form(action=`/users/${viewedUser.id}/follow`, method="POST")
-                  input(type="hidden", name="redirect", value=`/users/${viewedUser.id}`)
-                  button.profile-side-btn(type="submit")
-                    if isFollowing
-                      | ✓ Following
-                    else
-                      | + Follow User
-              else
-                a.profile-side-btn(href="/login") Login to Follow
+            if viewer && !isOwnProfile
+              form(action=`/users/${viewedUser.id}/follow` method="POST")
+                input(type="hidden" name="redirect" value=`/users/${viewedUser.id}`)
+                button(type="submit" class=isFollowing ? 'profile-side-btn is-following' : 'profile-side-btn')
+                  if isFollowing
+                    | ✓ Following
+                  else
+                    | + Follow Creator
 
           .profile-card
             h3 Community Stats
@@ -171,53 +257,75 @@ block content
                 strong= totalPosts
 
               .profile-stat-row
-                span Likes Received
-                strong= totalLikes
+                span Followers
+                strong= followersCount
 
               .profile-stat-row
-                span Comments
-                strong= totalComments
+                span Following
+                strong= followingCount
+
+              .profile-stat-row
+                span Saved Posts
+                strong= savedPostsCount
+
+              .profile-stat-row
+                span Comments Written
+                strong= commentsCount
+
+              .profile-stat-row
+                span Comments Received
+                strong= commentsReceivedCount
+
+              .profile-stat-row
+                span Likes Received
+                strong= totalLikes
 
               .profile-stat-row
                 span Views
                 strong= totalViews
 
-              .profile-stat-row
-                span Points
-                strong= points
+          .profile-card
+            h3 Favorite Games
+
+            if safeFavoriteGames.length
+              .user-profile-tags
+                each game in safeFavoriteGames
+                  a.user-profile-tag(href=`/posts?category=${encodeURIComponent(game.name || game.category || game)}`)
+                    | #{game.name || game.category || game}
+            else
+              p.profile-muted No favorite game activity yet.
 
           .profile-card
-            h3 Network
+            h3 Social Links
 
             .profile-stat-list
-              a.profile-stat-row(href=`/users/${viewedUser.id}/followers`)
-                span Followers
-                strong= followerCount
+              if website
+                a.profile-stat-row(href=websiteHref target="_blank" rel="noopener")
+                  span Website
+                  strong Visit
 
-              a.profile-stat-row(href=`/users/${viewedUser.id}/following`)
-                span Following
-                strong= followingCount
+              if twitterUrl
+                a.profile-stat-row(href=twitterUrl target="_blank" rel="noopener")
+                  span Twitter / X
+                  strong Open
 
-              if isOwnProfile
-                a.profile-stat-row(href="/posts/saved")
-                  span Saved Posts
-                  strong 💾
+              if youtubeUrl
+                a.profile-stat-row(href=youtubeUrl target="_blank" rel="noopener")
+                  span YouTube
+                  strong Open
 
-          .profile-card
-            h3 Gaming Details
+              if twitchUrl
+                a.profile-stat-row(href=twitchUrl target="_blank" rel="noopener")
+                  span Twitch
+                  strong Open
 
-            .profile-stat-list
-              .profile-stat-row
-                span Favorite Game
-                strong= favoriteGame
+              if discordName
+                .profile-stat-row
+                  span Discord
+                  strong= discordName
 
-              .profile-stat-row
-                span Platform
-                strong= platform
-
-              .profile-stat-row
-                span Location
-                strong= location
+              if !website && !twitterUrl && !youtubeUrl && !twitchUrl && !discordName
+                p.profile-muted No social links added yet.
 
           .profile-card
             h3 Explore More
